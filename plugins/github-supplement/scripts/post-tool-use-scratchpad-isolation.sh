@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# GB4PC: Claude Code PostToolUse hook: warn a worktree sub-agent that touched
-# the shared scratchpad outside its own subdirectory (issue #1187).
+# github-supplement: Claude Code PostToolUse hook: warn a worktree sub-agent that
+# touched the shared scratchpad outside its own subdirectory (issue #1187).
 #
-# Configured in .claude/settings.json under PostToolUse with the matcher
+# Registered in the plugin's hooks/hooks.json under PostToolUse with the matcher
 # "Bash|Write|Edit|NotebookEdit".  Every agent in a session, including each
 # worktree sub-agent, gets the same scratchpad directory, so a helper one agent
 # leaves at its top level can be overwritten or run by another, which then
 # reports a result from a tree it never touched.
-# AGENTS.md asks each agent to keep scratch files under a subdirectory named
-# after its worktree directory; this hook warns when a call strays from that.
+# The plugin's README asks each agent to keep scratch files under a subdirectory
+# named after its worktree directory; this hook warns when a call strays from that.
 #
 # What it checks: the Bash command, or the file_path (notebook_path for
 # NotebookEdit) of a Write or Edit, for every path that has a component named
@@ -21,8 +21,7 @@
 #
 # Who it checks: only an agent whose cwd (from the hook's input) lies under
 # .claude/worktrees/.  The worktree name comes from that cwd rather than from
-# this script's own path, because $CLAUDE_PROJECT_DIR can point a worktree
-# agent at the main checkout's copy of this script.
+# this script's own path, which is in the plugin rather than in any checkout.
 #
 # What it misses: a path held in a variable set by an earlier command, a
 # relative path such as "../sweep.sh" that climbs out of the subdirectory, and
@@ -89,6 +88,6 @@ done < <(grep -oE "$TOKEN/scratchpad$TOKEN" <<< "$TEXT")
     echo "Other sub-agents share that directory and may have written or run" \
          "anything there.  Keep your files under scratchpad/$WORKTREE/, and" \
          "before reporting a helper's result, confirm it printed this" \
-         "worktree ($CWD) and its HEAD.  See AGENTS.md."
+         "worktree ($CWD) and its HEAD.  See the github-supplement plugin's README."
 } >&2
 exit 2

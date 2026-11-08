@@ -1,0 +1,10 @@
+{
+  "name": "github-supplement",
+  "displayName": "GitHub supplement",
+  "version": "1.0.0",
+  "description": "GitHub REST helpers the MCP tools lack (delta label edits, issue links, comment deletion) on PATH, and PostToolUse hooks that fetch after sub-agents, read back GitHub writes, and keep worktree agents in their own scratchpad subdirectory.",
+  "author": { "name": "aunger" },
+  "repository": "https://github.com/aunger/dot-and-tilde",
+  "license": "MIT",
+  "keywords": ["github", "hooks", "labels", "worktrees"]
+}

@@ -40,7 +40,7 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-UPDATE="$SCRIPT_DIR/update_gh_labels.sh"
+UPDATE="$SCRIPT_DIR/../bin/update_gh_labels.sh"
 
 PASS=0
 FAIL=0

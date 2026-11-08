@@ -121,9 +121,8 @@ def _after_https_scheme(url: str) -> str:
     `urllib.request` opens `file:` and `ftp:` URLs as readily as `https:` ones,
     and the URLs here are built from caller arguments and API responses. The
     literal `"https://"` that `https_request` prepends is what ruff's S310
-    recognizes as safe. This is a copy of the check in the host repository's
-    `scripts/ci/prs-and-issues/https_only.py`, kept here so the script stays
-    a single file that the orchestrate plugin can carry into another repository.
+    recognizes as safe. The check is copied rather than imported, so the
+    script stays a single file with nothing to import from outside its plugin.
     """
     scheme, separator, rest = url.partition("://")
     if not separator or scheme.lower() != "https" or not rest:

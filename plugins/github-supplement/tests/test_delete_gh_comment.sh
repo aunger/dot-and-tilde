@@ -23,7 +23,7 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DELETE="$SCRIPT_DIR/delete_gh_comment.sh"
+DELETE="$SCRIPT_DIR/../bin/delete_gh_comment.sh"
 
 PASS=0
 FAIL=0

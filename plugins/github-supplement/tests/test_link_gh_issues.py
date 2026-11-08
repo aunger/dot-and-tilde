@@ -24,7 +24,8 @@ import urllib.error
 import urllib.request
 from unittest.mock import patch
 
-sys.path.insert(0, os.path.dirname(__file__))
+BIN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bin")
+sys.path.insert(0, BIN)
 import link_gh_issues as lgi
 
 OWNER = "aunger"
@@ -1226,7 +1227,7 @@ class TestRelations(unittest.TestCase):
         self.assertTrue(lgi.members_path("sub-issue", holder).endswith("/sub_issues"))
 
     def test_script_is_executable(self):
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "link_gh_issues.py")
+        path = os.path.join(BIN, "link_gh_issues.py")
         self.assertTrue(os.stat(path).st_mode & stat.S_IXUSR)
 
     def test_docstring_records_which_relations_are_not_handled(self):
@@ -1258,7 +1259,7 @@ class TestStandardLibraryOnly(unittest.TestCase):
     ALLOWED_NON_STDLIB = frozenset()
 
     def test_no_third_party_imports(self):
-        module_path = os.path.join(os.path.dirname(__file__), "link_gh_issues.py")
+        module_path = os.path.join(BIN, "link_gh_issues.py")
         with open(module_path, encoding="utf-8") as handle:
             source = handle.read()
         names = set()

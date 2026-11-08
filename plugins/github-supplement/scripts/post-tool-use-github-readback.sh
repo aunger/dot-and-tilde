@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# GB4PC: Claude Code PostToolUse hook: read back GitHub writes and diff them.
+# github-supplement: Claude Code PostToolUse hook: read back GitHub writes and diff them.
 #
-# Configured in .claude/settings.json under PostToolUse with the matcher
+# Registered in the plugin's hooks/hooks.json under PostToolUse with the matcher
 # "mcp__github__.*".  After every GitHub MCP tool call, the checker fetches the
 # object that was just written and compares the stored text with the text that
 # was sent, so silent alteration is reported at the moment it happens rather
 # than surviving review (issue #909).
 #
-# This wrapper carries the never-wedge guarantee; scripts/agents/verify_github_write.py
+# This wrapper carries the never-wedge guarantee; verify_github_write.py beside it
 # carries the thinking.  Exit codes from the checker:
 #
 #   0  nothing to say (clean, or the call was not a text write)
@@ -20,10 +20,7 @@
 
 set -uo pipefail
 
-# Resolve the repo root from the script's own path so this hook works in
-# worktrees as well as the main checkout.
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CHECKER="$REPO_ROOT/scripts/agents/verify_github_write.py"
+CHECKER="$(dirname "${BASH_SOURCE[0]}")/verify_github_write.py"
 
 python3 "$CHECKER"
 STATUS=$?

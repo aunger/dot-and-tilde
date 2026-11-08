@@ -3,7 +3,7 @@
 
 Every test here runs with no network: the read-back is stubbed, so what is
 under test is the filtering, locating, normalizing, diffing, escaping,
-classifying, logging, and reporting, plus the wiring in .claude/settings.json.
+classifying, logging, and reporting, plus the wiring in the plugin's hooks/hooks.json.
 
 The wiring test is the permanent guard against the failure this checker exists
 to prevent: a hook that looks configured, fires for nothing, and turns absence
@@ -16,6 +16,7 @@ import io
 import json
 import os
 import re
+import shlex
 import stat
 import sys
 import tempfile
@@ -23,10 +24,11 @@ import unittest
 import urllib.error
 from unittest.mock import patch
 
-sys.path.insert(0, os.path.dirname(__file__))
+SCRIPTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts")
+sys.path.insert(0, SCRIPTS)
 import verify_github_write as vgw
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+PLUGIN_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 MIDDLE_DOT = "·"
 
 
@@ -865,7 +867,7 @@ class TestLog(unittest.TestCase):
     def test_path_is_scoped_to_the_session_and_sanitized(self):
         path = vgw.log_path("../../etc/pa sswd")
         self.assertEqual(os.path.dirname(path), self.tmp.name)
-        self.assertNotIn("/", os.path.basename(path)[len("gb4pc-github-writes-") :])
+        self.assertNotIn("/", os.path.basename(path)[len("github-supplement-writes-") :])
 
     def test_entries_round_trip(self):
         vgw.append_log("s1", {"tool": "t", "status": "clean", "key": "k"})
@@ -1090,10 +1092,10 @@ class TestMain(unittest.TestCase):
 class TestStandardLibraryOnly(unittest.TestCase):
     """A hook that fails on a missing dependency is a hook that stops checking."""
 
-    ALLOWED_NON_STDLIB = frozenset({"github_headers", "https_only", "session_bylines"})
+    ALLOWED_NON_STDLIB = frozenset()
 
     def test_no_third_party_imports(self):
-        module_path = os.path.join(os.path.dirname(__file__), "verify_github_write.py")
+        module_path = os.path.join(SCRIPTS, "verify_github_write.py")
         with open(module_path, encoding="utf-8") as handle:
             source = handle.read()
         names = set()
@@ -1109,7 +1111,7 @@ class TestStandardLibraryOnly(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# The wiring in .claude/settings.json
+# The wiring in the plugin's hooks/hooks.json
 # ---------------------------------------------------------------------------
 
 # A matcher made only of these characters is compared as an exact string rather
@@ -1118,7 +1120,7 @@ class TestStandardLibraryOnly(unittest.TestCase):
 # checker exists to catch.
 _EXACT_MATCH_ONLY = re.compile(r"^[A-Za-z0-9_\-, |]+$")
 
-HOOK_SCRIPT = ".claude/hooks/post-tool-use-github-readback.sh"
+HOOK_SCRIPT = "scripts/post-tool-use-github-readback.sh"
 
 
 def matcher_matches(matcher: str, tool_name: str) -> bool:
@@ -1131,7 +1133,7 @@ def matcher_matches(matcher: str, tool_name: str) -> bool:
 class TestWiring(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        with open(os.path.join(REPO_ROOT, ".claude", "settings.json"), encoding="utf-8") as handle:
+        with open(os.path.join(PLUGIN_ROOT, "hooks", "hooks.json"), encoding="utf-8") as handle:
             settings = json.load(handle)
         entries = [
             entry
@@ -1145,7 +1147,7 @@ class TestWiring(unittest.TestCase):
 
     def test_the_command_exists_and_is_executable(self):
         command = self.entries[0]["hooks"][0]["command"]
-        path = command.replace("$CLAUDE_PROJECT_DIR", REPO_ROOT)
+        path = shlex.split(command.replace("${CLAUDE_PLUGIN_ROOT}", PLUGIN_ROOT))[-1]
         self.assertTrue(os.path.isfile(path), f"{path} does not exist")
         self.assertTrue(os.stat(path).st_mode & stat.S_IXUSR, f"{path} is not executable")
 

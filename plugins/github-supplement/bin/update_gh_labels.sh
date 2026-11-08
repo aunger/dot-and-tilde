@@ -22,8 +22,7 @@
 #
 # At least one --add or --remove is required. A label must not appear in both.
 # Removing a label that is not currently on the issue/PR is treated as
-# success (the goal state, "label absent," is already met), matching the
-# idempotent behavior of scripts/ci/labels/enforce_mutually_exclusive_labels.py.
+# success (the goal state, "label absent," is already met).
 #
 # Example (the Orchestrator's "Remove: orchestrate / Add: orchestrating"
 # transition from SKILL.md, in one delta call instead of a read-then-replace):

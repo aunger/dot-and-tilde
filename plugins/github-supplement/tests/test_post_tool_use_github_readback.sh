@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # test_post_tool_use_github_readback.sh: Shell-based tests for
-# .claude/hooks/post-tool-use-github-readback.sh.
+# the github-supplement plugin's scripts/post-tool-use-github-readback.sh.
 #
 # The hook is a thin wrapper: it pipes the PostToolUse payload to
-# scripts/agents/verify_github_write.py and decides what to do with the exit
+# verify_github_write.py beside it and decides what to do with the exit
 # code.  These tests stub "python3" on PATH, so they verify the wrapper's own
 # contract without a network, a token, or the real checker.
 #
@@ -16,14 +16,14 @@
 #   (e) A missing interpreter is also exit 0 plus a warning
 #   (f) The warning says the write was not verified, so the gap is visible
 #
-# Modeled on scripts/test_post_tool_use_fetch.sh.
+# Modeled on test_post_tool_use_fetch.sh.
 #
 # Always exits 0 on success, non-zero on failure.
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOOK="$SCRIPT_DIR/../.claude/hooks/post-tool-use-github-readback.sh"
+HOOK="$SCRIPT_DIR/../scripts/post-tool-use-github-readback.sh"
 
 PASS=0
 FAIL=0

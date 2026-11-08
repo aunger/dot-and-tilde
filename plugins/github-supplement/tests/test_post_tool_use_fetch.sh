@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # test_post_tool_use_fetch.sh: Shell-based tests for
-# .claude/hooks/post-tool-use-fetch.sh.
+# the github-supplement plugin's scripts/post-tool-use-fetch.sh.
 #
-# The hook runs "git fetch --prune --quiet" in the repo root.
+# The hook runs "git fetch --prune --quiet" in the session's checkout: the
+# hook input's cwd, else $CLAUDE_PROJECT_DIR.
 # These tests use a fake "git" on PATH to verify behaviour without
 # requiring a live network or a real remote.
 #
@@ -11,13 +12,16 @@
 #   (b) Exits 0 when git fetch succeeds
 #   (c) Exits 0 even when git fetch fails (offline-safe--never aborts session)
 #   (d) Prints a warning line when git fetch fails
+#   (e) Fetches in the hook input's cwd, not the plugin's own directory
+#   (f) Falls back to $CLAUDE_PROJECT_DIR when the input carries no cwd
 #
 # Always exits 0 on success, non-zero on failure.
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOOK="$SCRIPT_DIR/../.claude/hooks/post-tool-use-fetch.sh"
+HOOK="$SCRIPT_DIR/../scripts/post-tool-use-fetch.sh"
+PAYLOAD='{"tool_name":"Agent","cwd":"/work/checkout"}'
 
 PASS=0
 FAIL=0
@@ -45,7 +49,7 @@ EOF
 export GIT_ARGS_FILE
 chmod +x "$TMP_DIR/git"
 
-OUTPUT=$(PATH="$TMP_DIR:$PATH" bash "$HOOK" 2>&1)
+OUTPUT=$(PATH="$TMP_DIR:$PATH" bash "$HOOK" <<< "$PAYLOAD" 2>&1)
 EXIT_CODE=$?
 
 RECORDED_ARGS="$(cat "$GIT_ARGS_FILE" 2>/dev/null || true)"
@@ -80,7 +84,7 @@ exit 0
 EOF
 chmod +x "$TMP_DIR/git"
 
-OUTPUT=$(PATH="$TMP_DIR:$PATH" bash "$HOOK" 2>&1)
+OUTPUT=$(PATH="$TMP_DIR:$PATH" bash "$HOOK" <<< "$PAYLOAD" 2>&1)
 EXIT_CODE=$?
 
 if [[ $EXIT_CODE -eq 0 ]]; then
@@ -93,6 +97,33 @@ if echo "$OUTPUT" | grep -qi "warning"; then
     pass "(d) warning message printed on fetch failure"
 else
     fail "(d) no warning message found in output: '$OUTPUT'"
+fi
+
+# (e) & (f) Where the hook fetches--------------------------------------------
+echo ""
+echo "=== (e)+(f) fetches in the input's cwd, else \$CLAUDE_PROJECT_DIR ==="
+
+cat > "$TMP_DIR/git" << 'EOF'
+#!/usr/bin/env bash
+echo "$@" >> "$GIT_ARGS_FILE"
+exit 0
+EOF
+chmod +x "$TMP_DIR/git"
+
+rm -f "$GIT_ARGS_FILE"
+PATH="$TMP_DIR:$PATH" CLAUDE_PROJECT_DIR=/work/project bash "$HOOK" <<< "$PAYLOAD" > /dev/null 2>&1
+if [[ "$(cat "$GIT_ARGS_FILE" 2>/dev/null)" == "-C /work/checkout fetch --prune --quiet" ]]; then
+    pass "(e) fetches in the input's cwd"
+else
+    fail "(e) unexpected git args: '$(cat "$GIT_ARGS_FILE" 2>/dev/null)'"
+fi
+
+rm -f "$GIT_ARGS_FILE"
+PATH="$TMP_DIR:$PATH" CLAUDE_PROJECT_DIR=/work/project bash "$HOOK" <<< '{"tool_name":"Agent"}' > /dev/null 2>&1
+if [[ "$(cat "$GIT_ARGS_FILE" 2>/dev/null)" == "-C /work/project fetch --prune --quiet" ]]; then
+    pass "(f) falls back to \$CLAUDE_PROJECT_DIR"
+else
+    fail "(f) unexpected git args: '$(cat "$GIT_ARGS_FILE" 2>/dev/null)'"
 fi
 
 # Summary--------------------------------------------------------------------

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test_post_tool_use_scratchpad_isolation.sh: Shell-based tests for
-# .claude/hooks/post-tool-use-scratchpad-isolation.sh.
+# the github-supplement plugin's scripts/post-tool-use-scratchpad-isolation.sh.
 #
 # The hook reads a PostToolUse payload on stdin and needs nothing else, so
 # these tests feed it payloads and check the exit code and stderr.
@@ -22,14 +22,14 @@
 #   (k) Other tools, and unreadable input, are silent and exit 0
 #   (l) Paths joined by ",", ":" or "=" in one token are checked one by one
 #
-# Modeled on scripts/test_post_tool_use_fetch.sh.
+# Modeled on test_post_tool_use_fetch.sh.
 #
 # Always exits 0 on success, non-zero on failure.
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOOK="$SCRIPT_DIR/../.claude/hooks/post-tool-use-scratchpad-isolation.sh"
+HOOK="$SCRIPT_DIR/../scripts/post-tool-use-scratchpad-isolation.sh"
 
 PASS=0
 FAIL=0
