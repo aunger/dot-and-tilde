@@ -18,13 +18,13 @@ That split is what lets the plugin move to other projects, or out of this one, w
 | `scripts/hooks/`               | The hook scripts: `check_dispatch.py`, `orchestrator_guard.py` (registered by the Orchestrator skill for the session that runs it), `hook_state.py`, `protect_state.py`, and the form validator. |
 | `skills/orch-hooks/SKILL.md`   | `/orch-hooks disengage` and `/orch-hooks engage`: switch both hooks off, or back on, for the current session. User-invoked only.                                                                 |
 | `scripts/ci_monitor/`          | The CI Monitor, with its README and tests.                                                                                                                                                       |
-| `scripts/update_gh_labels.sh`  | Adds and removes specific labels through GitHub's delta endpoints, so a transition never touches a label outside its own row.                                                                    |
-| `scripts/link_gh_issues.py`    | Records GitHub issue dependencies and sub-issues, for the Verification Planner.                                                                                                                  |
-| `scripts/delete_gh_comment.sh` | Deletes one issue or PR comment, for cleanup the MCP tools have no verb for.                                                                                                                     |
 | `scripts/dispatch_cost.py`     | Reports a cycle's token spend from the session transcripts, while they exist.                                                                                                                    |
 | `scripts/check_config.py`      | Validates a project configuration file; a project can run it in CI.                                                                                                                              |
 
 Every script is standard-library Python or plain bash, with its tests in a `test_*` file beside it.
+
+The GitHub REST helpers the cycle calls, `update_gh_labels.sh`, `link_gh_issues.py` and `delete_gh_comment.sh`, belong to the github-supplement plugin, which this plugin declares as a dependency.
+Claude Code puts that plugin's `bin/` on the Bash tool's `PATH`, so the cycle runs them by bare name.
 
 ## Progressive revelation
 
@@ -94,36 +94,33 @@ The protocol uses these labels, which the project must have:
 | `c-a-<model>`         | Run the Author on `<model>`.                                                                                       |
 | `c-r-<model>`         | Run the Reviewer on `<model>`.                                                                                     |
 
-Transitions are applied with `scripts/update_gh_labels.sh`, never with a tool that replaces the whole label set.
+Transitions are applied with github-supplement's `update_gh_labels.sh`, never with a tool that replaces the whole label set.
 
 ## What the project supplies
 
 The agents load the project's `CLAUDE.md` or `AGENTS.md` like any sub-agent, and defer to it for everything that is the project's rather than the cycle's: how to build and test, how to write a PR description, how to write an issue or a comment, attribution footers, and dependency pinning.
 The plugin repeats none of that.
-In this repository those live in `AGENTS.md` and the `agents/` directory beside it.
 
 ## Loading
 
-Every part of the plugin loads only when Claude Code loads the directory **as a plugin**.
+Every part of the plugin loads only when Claude Code loads the directory **as a plugin**, together with github-supplement.
 No file sits at the directory's top level as `SKILL.md`, so nothing in it loads as a plain project skill, where the plugin's path variables are not set: when the plugin is not loaded, `/orchestrate` is simply not there.
 
-Claude Code loads it in one of two ways:
+Install it from a marketplace that lists both plugins:
 
-- **As a skills-directory plugin** (`orchestrate@skills-dir`), from the project's `.claude/skills/`, once the workspace trust dialog has been accepted for the project's folder.
-  A local session in a trusted checkout needs nothing more.
-  A cloud session never shows that dialog, and a `-p` run does not count as accepting it, so neither loads the plugin this way.
-- **As a session plugin** (`orchestrate@inline`), from a path named by `--plugin-dir` at launch or by the `CLAUDE_CODE_PLUGIN_DIRS` environment variable, which needs no trust dialog.
-  For cloud sessions, set `CLAUDE_CODE_PLUGIN_DIRS` to the absolute path of this directory in the clone (for example `/home/user/<repo>/.claude/skills/orchestrate`) in the cloud environment's environment variables.
-  A project's `.claude/settings.json` cannot set it.
+- **dot-and-tilde's own marketplace**, for whatever is on its default branch: `claude plugin install orchestrate --marketplace aunger/dot-and-tilde`.
+- **A project's own marketplace**, committed in the project, whose entries use `git-subdir` sources with a `sha` to pin both plugins to one dot-and-tilde commit. This is how a project fixes the version it runs.
+  The dependency resolves in the marketplace the plugin was installed from, so that marketplace lists github-supplement too.
+- **A checkout of dot-and-tilde**, for development: `--plugin-dir` or `CLAUDE_CODE_PLUGIN_DIRS` set to its `plugins/` directory loads every plugin in it for one session.
 
-When both apply, the session plugin takes precedence over the skills-directory one, and only one copy loads.
-`claude plugin list` shows which copy loaded, or why none did.
+A cloud session never installs plugins a repository declares in its `.claude/settings.json`.
+A project installs them instead from a script its `SessionStart` hook runs, then asks the user to run `/reload-skills`, which picks up the newly installed skills in the running session.
 
 With the plugin loaded, the Orchestrator skill's full name is `/orchestrate:orchestrate` and `/orchestrate` invokes it unless another command already uses that name; likewise `/orchestrate:orch-hooks` and `/orch-hooks`.
 
-## Installing in another project
+## Installing in a project
 
-1. Copy this directory to `<project>/.claude/skills/orchestrate/` and commit it, then make sure each session loads it as a plugin (see "Loading" below).
+1. Install this plugin and github-supplement (see "Loading" above).
 2. Write `<project>/.claude/orchestrate.json` (the table above) and run `scripts/check_config.py` over it.
 3. Create the labels above.
 4. Say in the project's `CLAUDE.md` or `AGENTS.md` that the cycle is started with `/orchestrate <issue>`, and keep the project's own conventions there.
@@ -131,18 +128,13 @@ With the plugin loaded, the Orchestrator skill's full name is `/orchestrate:orch
 A `GITHUB_TOKEN` with write access to issues and labels must be in the environment of the session; the scripts take it from there, never from the command line.
 The sessions that run the cycle need the GitHub MCP server, which the agents use for every read and write the scripts do not cover.
 
-### Moving the plugin to its own repository
-
-Nothing in this directory refers to its host by path: every script and reference is reached through `${CLAUDE_PLUGIN_ROOT}`, including the hook command in the Orchestrator skill's frontmatter.
-The host repository keeps `.claude/orchestrate.json`, its labels, and its own instructions, which is everything that was ever specific to it.
-
 ## Validating
 
+From the root of dot-and-tilde:
+
 ```bash
-claude plugin validate .claude/skills/orchestrate
-python3 -m unittest discover -s .claude/skills/orchestrate/scripts -p 'test_*.py'
-python3 -m unittest discover -s .claude/skills/orchestrate/scripts/hooks -p 'test_*.py'
-python3 .claude/skills/orchestrate/scripts/ci_monitor/test_ci_monitor.py
-bash .claude/skills/orchestrate/scripts/test_update_gh_labels.sh
-bash .claude/skills/orchestrate/scripts/test_delete_gh_comment.sh
+claude plugin validate plugins/orchestrate
+python3 -m unittest discover -s plugins/orchestrate/scripts -p 'test_*.py'
+python3 -m unittest discover -s plugins/orchestrate/scripts/hooks -p 'test_*.py'
+python3 plugins/orchestrate/scripts/ci_monitor/test_ci_monitor.py
 ```
