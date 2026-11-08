@@ -51,7 +51,7 @@ Two hooks enforce this rather than ask for it:
 
 To switch the hooks off for a session, a person runs `/orch-hooks disengage` (`/orch-hooks engage` restores them, `/orch-hooks status` reports).
 A `UserPromptExpansion` hook makes the change: Claude Code fires that event when a person types a command, never when the model invokes one, and the skill is user-invoked only besides.
-The hook records the session id in `.state/disengaged-sessions` under the plugin root, which the host repository ignores; both enforcing hooks read that file first and exit before doing anything for a listed session.
+The hook records the session id in a file under `${CLAUDE_PLUGIN_DATA}`, the directory Claude Code keeps for a plugin's state across updates; both enforcing hooks read that file first and exit before doing anything for a listed session.
 Nothing else writes the file, and `scripts/hooks/protect_state.py` refuses any Bash, Monitor, Write or Edit call, in any session or agent, whose command or path names it.
 That check reads text, so it stops the obvious route rather than every route; in Orchestrator mode the guard's command allowlist covers the rest.
 Setting the environment variable `ORCHESTRATE_HOOKS_DISENGAGED` to anything but empty, `0` or `false` in Claude Code's own environment disengages the hooks for every session that has it.

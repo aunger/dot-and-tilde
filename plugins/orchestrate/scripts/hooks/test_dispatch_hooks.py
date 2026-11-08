@@ -429,12 +429,19 @@ class TestHookState(unittest.TestCase):
             edit["session_id"] = "s2"
             self.assertEqual(orchestrator_guard.decide(edit)[0], 2)
 
-    def test_the_hooks_read_the_default_state_file_of_the_plugin(self):
-        # Both hooks call hooks_disengaged() with the module default, which is
-        # .state/disengaged-sessions under the plugin root, where the skill writes.
+    def test_the_state_file_lives_in_the_plugin_data_directory(self):
+        # Every hook process gets $CLAUDE_PLUGIN_DATA, so the skill's writer and
+        # both enforcing hooks resolve the same file, which survives updates.
+        self.assertEqual(
+            hook_state.default_state_file({"CLAUDE_PLUGIN_DATA": "/data/orchestrate"}),
+            os.path.join("/data/orchestrate", hook_state.STATE_FILE_NAME),
+        )
+
+    def test_without_a_data_directory_the_state_file_is_under_the_plugin(self):
         plugin_root = os.path.dirname(os.path.dirname(HERE))
         self.assertEqual(
-            hook_state.STATE_FILE, os.path.join(plugin_root, ".state", "disengaged-sessions")
+            hook_state.default_state_file({}),
+            os.path.join(plugin_root, ".state", hook_state.STATE_FILE_NAME),
         )
 
 

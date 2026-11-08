@@ -9,12 +9,16 @@ those hooks consult first.
 
 State is per session, in a file the plugin owns:
 
-    <plugin root>/.state/disengaged-sessions
+    ${CLAUDE_PLUGIN_DATA}/disengaged-sessions
 
-one session id per line. A hook whose payload carries a listed session_id
-exits 0 before doing anything else. The file is not committed (the host
-repository ignores .state/), and a session that never disengaged is never
-listed, so a fresh session always has its hooks.
+one session id per line. CLAUDE_PLUGIN_DATA is the directory Claude Code gives
+a plugin for state that survives updates, and exports to every hook process;
+the plugin root is a per-version cache directory that is no place for state.
+Run outside a hook, with no CLAUDE_PLUGIN_DATA, the file falls back to
+<plugin root>/.state/disengaged-sessions, which this repository ignores. A
+hook whose payload carries a listed session_id exits 0 before doing anything
+else, and a session that never disengaged is never listed, so a fresh session
+always has its hooks.
 
 Only a person changes the state. This script runs as the plugin's
 UserPromptExpansion hook (hooks/hooks.json), which Claude Code fires when a
@@ -39,11 +43,17 @@ import os
 import sys
 
 ENV_VAR = "ORCHESTRATE_HOOKS_DISENGAGED"
-STATE_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".state"
-)
+PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 STATE_FILE_NAME = "disengaged-sessions"
-STATE_FILE = os.path.join(STATE_DIR, STATE_FILE_NAME)
+
+
+def default_state_file(environ=None):
+    """Return the state file: under $CLAUDE_PLUGIN_DATA, else under the plugin's .state/."""
+    data_dir = (environ if environ is not None else os.environ).get("CLAUDE_PLUGIN_DATA")
+    return os.path.join(data_dir or os.path.join(PLUGIN_ROOT, ".state"), STATE_FILE_NAME)
+
+
+STATE_FILE = default_state_file()
 
 SKILL_NAME = "orch-hooks"
 COMMANDS = ("disengage", "engage", "status")
