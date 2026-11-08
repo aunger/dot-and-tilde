@@ -116,10 +116,11 @@ If the ID is no longer available or resumption fails, spawn a replacement with t
 
 ## Labels
 
-Apply every transition table in this document with the label script, one call per row, every "Remove" entry as `--remove` and every "Add" entry as `--add`:
+Apply every transition table in this document with the label script, one call per row, every "Remove" entry as `--remove` and every "Add" entry as `--add`.
+The script comes from the github-supplement plugin, which this plugin depends on; Claude Code puts that plugin's `bin/` on the Bash tool's `PATH`, so it runs by bare name:
 
 ```text
-${CLAUDE_PLUGIN_ROOT}/scripts/update_gh_labels.sh {owner} {repo} {issue-or-PR number} --remove orchestrate --add orchestrating
+update_gh_labels.sh {owner} {repo} {issue-or-PR number} --remove orchestrate --add orchestrating
 ```
 
 It calls GitHub's delta label endpoints, so a transition never touches a label outside its own row.

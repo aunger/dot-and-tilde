@@ -9,7 +9,7 @@ cycle that #1011 is about. A cycle's cost can be measured while it runs and not
 afterwards, which is the argument for a checked-in script rather than an ad-hoc
 one: the data is gone by the time anyone thinks to ask.
 
-Follows `link_gh_issues.py` (issue #1000) and
+Follows github-supplement's `link_gh_issues.py` (issue #1000) and
 `update_gh_labels.sh` (issue #710): standard library only, no
 `gh` CLI.
 

@@ -487,10 +487,8 @@ class TestOrchestratorGuardCoverage(unittest.TestCase):
             "git status --short",
             "git rev-parse HEAD",
             "git ls-remote origin",
-            self.ROOT
-            + "/scripts/update_gh_labels.sh o r 7 --remove orchestrate --add orchestrating",
-            self.ROOT + '/scripts/update_gh_labels.sh o r 7 --add "changes requested"',
-            "bash " + self.ROOT + "/scripts/update_gh_labels.sh o r 7 --add verified",
+            "update_gh_labels.sh o r 7 --remove orchestrate --add orchestrating",
+            'update_gh_labels.sh o r 7 --add "changes requested"',
             "python3 "
             + self.ROOT
             + "/scripts/ci_monitor/ci_monitor.py --pr 7 --repo o/r --config /p/.claude/orchestrate.json",
@@ -523,6 +521,11 @@ class TestOrchestratorGuardCoverage(unittest.TestCase):
             "sleep 300 &",
             "python3 " + self.ROOT + "/scripts/hooks/hook_state.py disengage --session s",
             "python3 " + self.ROOT + "/scripts/link_gh_issues.py add o r 1 --blocked-by 2",
+            "link_gh_issues.py add o r 1 --blocked-by 2",
+            "bash update_gh_labels.sh o r 7 --add verified",
+            "/elsewhere/update_gh_labels.sh o r 7 --add verified",
+            "./update_gh_labels.sh o r 7 --add verified",
+            "update_gh_labels.sh o r 7; cat Foo.kt",
             "python3 " + self.ROOT + "/scripts/../../../../app/x.py",
             "python3 /elsewhere/scripts/ci_monitor/ci_monitor.py --pr 7",
             "python3",

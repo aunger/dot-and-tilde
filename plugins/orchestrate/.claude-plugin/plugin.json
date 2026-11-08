@@ -6,7 +6,8 @@
   "author": {
     "name": "aunger"
   },
-  "repository": "https://github.com/aunger/gallery-button-for-pixel-camera",
+  "repository": "https://github.com/aunger/dot-and-tilde",
+  "dependencies": ["github-supplement"],
   "license": "MIT",
   "keywords": ["orchestration", "code-review", "github", "ci"]
 }

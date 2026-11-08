@@ -60,12 +60,16 @@ PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__
 # The plugin scripts the Orchestrator runs, relative to the plugin root.
 PLUGIN_SCRIPTS = frozenset(
     {
-        "scripts/update_gh_labels.sh",
         "scripts/ci_monitor/ci_monitor.py",
         "scripts/check_config.py",
         "scripts/dispatch_cost.py",
     }
 )
+# Commands the Orchestrator runs by bare name from a plugin this one depends on.
+# Claude Code adds each plugin's bin/ to the Bash tool's PATH but not to a hook
+# process's PATH, so the guard cannot resolve these the way the Bash tool will;
+# it allows the exact names, with no path and no interpreter in front of them.
+BARE_COMMANDS = frozenset({"update_gh_labels.sh"})
 INTERPRETERS = frozenset({"python3", "python", "bash", "sh"})
 GIT_SUBCOMMANDS = frozenset({"branch", "fetch", "status", "rev-parse", "ls-remote"})
 # `git branch` may create a branch or list them, but not delete, move, copy or force.
@@ -79,7 +83,7 @@ BASH_ALLOWED_FORMS = (
     "date [-u] [+FORMAT]",
     "sleep SECONDS",
     "git {branch,fetch,status,rev-parse,ls-remote} ... (git branch creates or lists only)",
-    "[python3] <plugin root>/scripts/update_gh_labels.sh ...",
+    "update_gh_labels.sh ... (from the github-supplement plugin, by bare name)",
     "python3 <plugin root>/scripts/ci_monitor/ci_monitor.py ...",
     "python3 <plugin root>/scripts/check_config.py ...",
     "python3 <plugin root>/scripts/dispatch_cost.py ...",
@@ -183,6 +187,8 @@ def command_allowed(command, cwd=None):
             return False
         if args[0] == "branch":
             return not any(arg in GIT_BRANCH_REFUSED_FLAGS for arg in args[1:])
+        return True
+    if program in BARE_COMMANDS:
         return True
     if program in INTERPRETERS:
         return bool(args) and _plugin_script(args[0], cwd) is not None
