@@ -1,0 +1,46 @@
+name: Test
+
+# Validates the marketplace and every plugin manifest, and runs each plugin's
+# tests. Every command here is one the README's Testing section lists.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Claude Code
+        # Pinned to the version the plugin layout was tested with.
+        run: npm install -g @anthropic-ai/claude-code@2.1.318
+      - name: Validate the marketplace and each plugin
+        run: |
+          set -e
+          claude plugin validate .
+          for p in plugins/*/; do claude plugin validate "$p"; done
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+      - name: orchestrate
+        run: |
+          set -e
+          python3 -m unittest discover -s plugins/orchestrate/scripts -p 'test_*.py'
+          python3 -m unittest discover -s plugins/orchestrate/scripts/hooks -p 'test_*.py'
+          python3 plugins/orchestrate/scripts/ci_monitor/test_ci_monitor.py
+      - name: github-supplement
+        run: |
+          set -e
+          python3 -m unittest discover -s plugins/github-supplement/tests -p 'test_*.py'
+          for t in plugins/github-supplement/tests/test_*.sh; do bash "$t"; done

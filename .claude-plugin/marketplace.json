@@ -1,0 +1,22 @@
+{
+  "name": "dot-and-tilde",
+  "description": "Personal Claude Code plugins: a multi-agent development cycle for GitHub issues, GitHub helpers and hooks it depends on, and general-purpose agents.",
+  "owner": { "name": "aunger" },
+  "plugins": [
+    {
+      "name": "orchestrate",
+      "source": "./plugins/orchestrate",
+      "description": "A multi-agent development cycle for GitHub issues, started with /orchestrate."
+    },
+    {
+      "name": "github-supplement",
+      "source": "./plugins/github-supplement",
+      "description": "GitHub REST helpers on PATH, and hooks that fetch after sub-agents, read back GitHub writes, and keep worktree agents in their own scratchpad subdirectory."
+    },
+    {
+      "name": "bag-o-agents",
+      "source": "./plugins/bag-o-agents",
+      "description": "General-purpose sub-agents, starting with deep-planner."
+    }
+  ]
+}
