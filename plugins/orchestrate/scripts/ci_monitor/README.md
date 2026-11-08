@@ -11,14 +11,11 @@ The Monitor reports what CI did and carries no knowledge of the project whose CI
 Project-specific behavior reaches it only through the config file `--config` names (the host project's `.claude/orchestrate.json`, in the plugin's convention) and the repository it is told to poll.
 Which checks matter is policy, stated by the Monitor's consumers: the Orchestrator's named checks are the `named_checks` list of that same config file.
 
-Two known exceptions remain:
-
-- `DEFAULT_REPOSITORY`, the repository polled when neither `--repo` nor `$GITHUB_REPOSITORY` names one, is the repository the Monitor was written in; the plugin always passes `--repo`.
-- The `artifact_name_regex` default, `^testresults-`, is that repository's historical artifact prefix.
+One known exception remains: the `artifact_name_regex` default, `^testresults-`, is the historical artifact prefix of the project the Monitor was written in.
 
 ## Running the monitor
 
-Run it with **exactly one** identifier (`${CLAUDE_PLUGIN_ROOT}` is the plugin's root directory; in this repository, `.claude/skills/orchestrate`):
+Run it with **exactly one** identifier (`${CLAUDE_PLUGIN_ROOT}` is the plugin's root directory):
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/ci_monitor/ci_monitor.py --pr <PR_NUMBER> [--repo OWNER/REPO] [--config PATH] [filter flags]
@@ -63,7 +60,7 @@ A failing NON-required check (for example an advisory label linter) leaves `merg
 
 `--run-id` additionally does not fetch `/commits/{sha}/check-runs` at all--it resolves its verdict from the run object itself (`GET /actions/runs/{run_id}`, which carries `status`/`conclusion`/`head_sha` directly), and scopes step/artifact diagnostics to that one run's jobs. This keeps `--run-id` immune to an unrelated check on the same commit (e.g. a CodeQL workflow that also runs on every commit) confusing its verdict--the problem `--pr`/`--sha`/`--branch` modes can in principle have if unrelated checks land on the same commit.
 
-The repository polled is the one `--repo OWNER/REPO` names, else `$GITHUB_REPOSITORY` (which GitHub Actions sets to the workflow's repository), else `DEFAULT_REPOSITORY`.
+The repository polled is the one `--repo OWNER/REPO` names, else `$GITHUB_REPOSITORY` (which GitHub Actions sets to the workflow's repository); with neither, the Monitor exits with a usage error before any request.
 A value from the source used that GitHub could not issue as `OWNER/REPO` is a usage error, reported before any request is made: `OWNER` is letters, digits, `-` and `_`, and `REPO` adds `.` but may not be `.` or `..`, so no dot segment reaches a request path.
 A `--repo` value wins without `$GITHUB_REPOSITORY` being checked at all.
 The script reads `$GITHUB_TOKEN` from the environment (required).

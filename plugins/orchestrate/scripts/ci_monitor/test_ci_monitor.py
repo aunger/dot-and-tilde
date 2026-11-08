@@ -124,8 +124,8 @@ Covers:
   (bk) without_ignored_checks: ignored checks leave the verdict but stay in
        the summary, marked [ignored]
   (bl) #1111 main(): the polled repository comes from --repo, then
-       $GITHUB_REPOSITORY, then DEFAULT_REPOSITORY; a malformed value from
-       the source used is a usage error before any request, while a valid
+       $GITHUB_REPOSITORY; with neither it is a usage error, a malformed value
+       from the source used is a usage error before any request, and a valid
        --repo wins over a malformed $GITHUB_REPOSITORY
   (bm) #1111 main(): --config PATH is the file load_config() reads; without
        it, load_config() gets None and reads the file next to the script
@@ -359,7 +359,12 @@ def check_runs_payload(*pairs):
     return {"total_count": len(runs), "check_runs": runs}
 
 
-REPOSITORY_T = ci_monitor.DEFAULT_REPOSITORY
+# The repository the tests poll. main() has no in-code default, so the suite
+# supplies one through $GITHUB_REPOSITORY, as CI does; (bl) removes it to test
+# the --repo rules.
+REPOSITORY_T = "aunger/gallery-button-for-pixel-camera"
+os.environ["GITHUB_REPOSITORY"] = REPOSITORY_T
+API_T = ci_monitor.repo_api(REPOSITORY_T)
 
 # Issue #748: on the --pr Blocked/Infra path the monitor now re-fetches /pulls for
 # mergeable_state before terminating (mirroring the all_passed path), and emits the
@@ -1042,7 +1047,7 @@ def _run_checks() -> int:
         ),
         unittest.mock.patch.object(ci_monitor.time, "time", return_value=1000.0),
     ):
-        got_first = ci_monitor.fetch_pr_with_retry("290", "tok")
+        got_first = ci_monitor.fetch_pr_with_retry("290", "tok", api=API_T)
     check(
         got_first == PR_RETRY and calls_first["n"] == 1,
         "fetch_pr_with_retry succeeds on first try with no sleep",
@@ -1065,7 +1070,7 @@ def _run_checks() -> int:
         unittest.mock.patch.object(ci_monitor.time, "sleep", side_effect=slept.append),
         unittest.mock.patch.object(ci_monitor.time, "time", return_value=1000.0),
     ):
-        got_retry = ci_monitor.fetch_pr_with_retry("290", "tok", attempts=3, base_delay=2)
+        got_retry = ci_monitor.fetch_pr_with_retry("290", "tok", attempts=3, base_delay=2, api=API_T)
     check(
         got_retry == PR_RETRY,
         "fetch_pr_with_retry retries transient failures and eventually succeeds",
@@ -1095,7 +1100,7 @@ def _run_checks() -> int:
         unittest.mock.patch.object(ci_monitor.time, "sleep", side_effect=slept_fail.append),
         unittest.mock.patch.object(ci_monitor.time, "time", return_value=1000.0),
     ):
-        got_fail = ci_monitor.fetch_pr_with_retry("290", "tok", attempts=3, base_delay=2)
+        got_fail = ci_monitor.fetch_pr_with_retry("290", "tok", attempts=3, base_delay=2, api=API_T)
     check(
         got_fail is None,
         "fetch_pr_with_retry returns None when every attempt fails",
@@ -1127,7 +1132,7 @@ def _run_checks() -> int:
         unittest.mock.patch.object(ci_monitor.time, "sleep", side_effect=slept_rl.append),
         unittest.mock.patch.object(ci_monitor.time, "time", return_value=1000.0),
     ):
-        got_rl = ci_monitor.fetch_pr_with_retry("290", "tok", attempts=3, base_delay=2)
+        got_rl = ci_monitor.fetch_pr_with_retry("290", "tok", attempts=3, base_delay=2, api=API_T)
     check(
         got_rl == PR_RETRY and slept_rl == [7],
         "rate-limit Retry-After hint (7s) honored over exponential backoff",
@@ -4508,7 +4513,7 @@ def _run_checks() -> int:
     with unittest.mock.patch.object(
         ci_monitor, "fetch_with_retry", side_effect=_spy_fetch_with_retry_as
     ):
-        got_as = ci_monitor.fetch_pr_with_retry("999", "tok")
+        got_as = ci_monitor.fetch_pr_with_retry("999", "tok", api=API_T)
     check(
         got_as == {"head": {"sha": "beefcafe"}},
         "fetch_pr_with_retry returns fetch_with_retry's result",
@@ -6474,8 +6479,8 @@ def _run_checks() -> int:
         "deque has %d left; rc %r" % (len(side_effects_bk2), rc_bk2),
     )
 
-    # ── (bl) #1111 --repo / $GITHUB_REPOSITORY / DEFAULT_REPOSITORY ───────────────
-    print("\n=== (bl) #1111 main(): --repo, then $GITHUB_REPOSITORY, then the default ===")
+    # ── (bl) #1111 --repo / $GITHUB_REPOSITORY ──────────────────────────────────────
+    print("\n=== (bl) #1111 main(): --repo, then $GITHUB_REPOSITORY, else a usage error ===")
 
     def _first_url_bl(argv, env_repo):
         """Run main() on a merged PR and return the URLs it requested.
@@ -6506,8 +6511,6 @@ def _run_checks() -> int:
         return "%s/repos/%s/pulls/7" % (ci_monitor.API_BASE, repository)
 
     for argv_bl, env_bl, want_bl, label_bl in (
-        ([], None, REPOSITORY_T, "neither --repo nor $GITHUB_REPOSITORY"),
-        ([], "", REPOSITORY_T, "an empty $GITHUB_REPOSITORY"),
         ([], "env-owner/env.repo", "env-owner/env.repo", "$GITHUB_REPOSITORY alone"),
         (["--repo", "flag_owner/flag-repo"], None, "flag_owner/flag-repo", "--repo alone"),
         (["--repo", "owner/.github"], None, "owner/.github", "--repo with a leading-dot REPO"),
@@ -6530,6 +6533,22 @@ def _run_checks() -> int:
             "%s polls %s" % (label_bl, want_bl),
             "%s: expected [%r], got %r" % (label_bl, _pulls_url_bl(want_bl), got_bl),
         )
+
+    for env_bl, label_bl in (
+        (None, "neither --repo nor $GITHUB_REPOSITORY"),
+        ("", "an empty $GITHUB_REPOSITORY and no --repo"),
+    ):
+        err_bl = io.StringIO()
+        try:
+            with unittest.mock.patch("sys.stderr", new=err_bl):
+                urls_bl = _first_url_bl([], env_bl)
+            _fail("%s should exit with a usage error; it requested %r" % (label_bl, urls_bl))
+        except SystemExit as e:
+            check(
+                e.code == 2 and "--repo OWNER/REPO is required" in err_bl.getvalue(),
+                "%s exits 2 with a missing-repository usage error before any request" % label_bl,
+                "%s: exit %r, stderr %r" % (label_bl, e.code, err_bl.getvalue()),
+            )
 
     for argv_bl, env_bl, label_bl in (
         (["--repo", "no-slash"], None, "--repo with no slash"),
@@ -6597,7 +6616,7 @@ def _run_checks() -> int:
     print("\n=== (bn) #1225 fetch_latest_check_runs: every page is read, then collapsed ===")
 
     GATE_BL = REPO_GATE_NAME
-    API_BL = ci_monitor.repo_api(ci_monitor.DEFAULT_REPOSITORY)
+    API_BL = API_T
     # 100 gate runs fill page 1 (newest first, so the highest ids); the only
     # build-and-test run is the oldest and lands alone on page 2.
     PAGE1_BL = {

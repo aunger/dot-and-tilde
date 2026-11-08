@@ -48,8 +48,6 @@ import urllib.parse
 import urllib.request
 import zipfile
 
-# The repository polled when neither --repo nor $GITHUB_REPOSITORY names one.
-DEFAULT_REPOSITORY = "aunger/gallery-button-for-pixel-camera"
 API_BASE = "https://api.github.com"
 
 
@@ -946,16 +944,14 @@ def fetch_with_retry(url, token, attempts=3, base_delay=2):
     return None
 
 
-def fetch_pr_with_retry(pr, token, attempts=3, base_delay=2, api=None):
+def fetch_pr_with_retry(pr, token, attempts=3, base_delay=2, *, api):
     """Fetch /pulls/{n} with bounded exponential backoff and rate-limit handling.
 
     Thin wrapper over fetch_with_retry that builds the /pulls/{n} URL; kept as
     its own function since it is the --pr path's entry point and is exercised
     directly by the test suite. `api` is the repository's REST base from
-    repo_api(); None means DEFAULT_REPOSITORY's.
+    repo_api().
     """
-    if api is None:
-        api = repo_api(DEFAULT_REPOSITORY)
     url = "%s/pulls/%s" % (api, pr)
     return fetch_with_retry(url, token, attempts=attempts, base_delay=base_delay)
 
@@ -1198,11 +1194,13 @@ def main(argv):
         "--repo",
         metavar="OWNER/REPO",
         type=_repository_arg,
-        default=os.environ.get("GITHUB_REPOSITORY") or DEFAULT_REPOSITORY,
-        help="The repository to poll (default: $GITHUB_REPOSITORY, then %s)." % DEFAULT_REPOSITORY,
+        default=os.environ.get("GITHUB_REPOSITORY") or None,
+        help="The repository to poll (default: $GITHUB_REPOSITORY; required when that is unset).",
     )
 
     args = parser.parse_args(argv[1:])
+    if args.repo is None:
+        parser.error("--repo OWNER/REPO is required when $GITHUB_REPOSITORY is not set")
     token = os.environ.get("GITHUB_TOKEN", "")
     api = repo_api(args.repo)
     outcome_filters = _parse_outcome_filters(args)
