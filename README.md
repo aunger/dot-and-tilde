@@ -22,6 +22,11 @@ To pin a project to one commit, commit a marketplace in the project whose entrie
 A marketplace source such as `aunger/dot-and-tilde#<ref>` takes a branch or tag but not a commit, so the pin goes on each plugin entry.
 List every plugin the project installs, dependencies included, since a dependency resolves in the marketplace its dependent came from.
 
+The plugin manifests set no `version` on purpose.
+Claude Code takes a manifest's `version` before anything else and keeps an install on its cached copy until that string changes, so a pinned version would make moving the `sha` do nothing.
+Without one, a `git-subdir` plugin's version is its commit.
+`claude plugin validate` warns that no version is set; that warning is expected.
+
 A cloud session does not install plugins a repository declares in its `.claude/settings.json`.
 A project there installs them from a script its `SessionStart` hook runs, then the user runs `/reload-skills`.
 
