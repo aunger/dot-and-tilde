@@ -76,10 +76,13 @@ import urllib.request
 API_ROOT = "https://api.github.com"
 
 
-# The three helpers below are this plugin's own copies of code the actions
-# repository also carries for its CI-side scripts.  The plugin stays a set of
-# single files with no imports from outside it; the price is that a change to
-# the byline pattern has to be made in both places in the same pass.
+# The three helpers below, and BYLINE_RE and strip_bylines() after them, are
+# copies of code in aunger/gallery-button-for-pixel-camera's
+# scripts/ci/prs-and-issues/ (github_headers.py, https_only.py and
+# session_bylines.py).  The plugin stays a set of single files with no imports
+# from outside it.  bin/link_gh_issues.py carries the same three helpers, and
+# tests/test_helper_copies.py fails when the two copies differ; a change to the
+# originals, the byline pattern most of all, has to be copied here by hand.
 
 
 def github_headers(token: str) -> dict[str, str]:

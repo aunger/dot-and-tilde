@@ -5,6 +5,7 @@ The two hooks are also driven end to end, as Claude Code drives them: a JSON
 payload on stdin, the verdict in the exit code, the reason on stderr.
 """
 
+import importlib
 import io
 import json
 import os
@@ -429,19 +430,15 @@ class TestHookState(unittest.TestCase):
             edit["session_id"] = "s2"
             self.assertEqual(orchestrator_guard.decide(edit)[0], 2)
 
-    def test_the_state_file_lives_in_the_plugin_data_directory(self):
-        # Every hook process gets $CLAUDE_PLUGIN_DATA, so the skill's writer and
-        # both enforcing hooks resolve the same file, which survives updates.
-        self.assertEqual(
-            hook_state.default_state_file({"CLAUDE_PLUGIN_DATA": "/data/orchestrate"}),
-            os.path.join("/data/orchestrate", hook_state.STATE_FILE_NAME),
-        )
-
-    def test_without_a_data_directory_the_state_file_is_under_the_plugin(self):
+    def test_the_hooks_read_the_state_file_under_the_plugin_root(self):
+        # The guard is a skill hook, whose process Claude Code gives no
+        # $CLAUDE_PLUGIN_DATA, so every reader and the writer derive the file
+        # from the plugin root; a data directory in the environment is ignored.
         plugin_root = os.path.dirname(os.path.dirname(HERE))
+        with patch.dict(os.environ, {"CLAUDE_PLUGIN_DATA": "/data/orchestrate"}):
+            reloaded = importlib.reload(hook_state)
         self.assertEqual(
-            hook_state.default_state_file({}),
-            os.path.join(plugin_root, ".state", hook_state.STATE_FILE_NAME),
+            reloaded.STATE_FILE, os.path.join(plugin_root, ".state", hook_state.STATE_FILE_NAME)
         )
 
 

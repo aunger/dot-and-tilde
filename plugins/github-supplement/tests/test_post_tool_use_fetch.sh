@@ -3,7 +3,7 @@
 # the github-supplement plugin's scripts/post-tool-use-fetch.sh.
 #
 # The hook runs "git fetch --prune --quiet" in the session's checkout: the
-# hook input's cwd, else $CLAUDE_PROJECT_DIR.
+# first of the hook input's cwd and $CLAUDE_PROJECT_DIR inside a work tree.
 # These tests use a fake "git" on PATH to verify behaviour without
 # requiring a live network or a real remote.
 #
@@ -14,6 +14,7 @@
 #   (d) Prints a warning line when git fetch fails
 #   (e) Fetches in the hook input's cwd, not the plugin's own directory
 #   (f) Falls back to $CLAUDE_PROJECT_DIR when the input carries no cwd
+#   (g) Falls back to $CLAUDE_PROJECT_DIR when the cwd is not in a work tree
 #
 # Always exits 0 on success, non-zero on failure.
 
@@ -101,10 +102,15 @@ fi
 
 # (e) & (f) Where the hook fetches--------------------------------------------
 echo ""
-echo "=== (e)+(f) fetches in the input's cwd, else \$CLAUDE_PROJECT_DIR ==="
+echo "=== (e)-(g) fetches in the input's cwd, else \$CLAUDE_PROJECT_DIR ==="
 
+# Fake git: every directory but /work/not-a-repo is a work tree; record fetches.
 cat > "$TMP_DIR/git" << 'EOF'
 #!/usr/bin/env bash
+if [[ "$3" == "rev-parse" ]]; then
+    [[ "$2" != /work/not-a-repo ]]
+    exit
+fi
 echo "$@" >> "$GIT_ARGS_FILE"
 exit 0
 EOF
@@ -124,6 +130,15 @@ if [[ "$(cat "$GIT_ARGS_FILE" 2>/dev/null)" == "-C /work/project fetch --prune -
     pass "(f) falls back to \$CLAUDE_PROJECT_DIR"
 else
     fail "(f) unexpected git args: '$(cat "$GIT_ARGS_FILE" 2>/dev/null)'"
+fi
+
+rm -f "$GIT_ARGS_FILE"
+PATH="$TMP_DIR:$PATH" CLAUDE_PROJECT_DIR=/work/project bash "$HOOK" \
+    <<< '{"tool_name":"Agent","cwd":"/work/not-a-repo"}' > /dev/null 2>&1
+if [[ "$(cat "$GIT_ARGS_FILE" 2>/dev/null)" == "-C /work/project fetch --prune --quiet" ]]; then
+    pass "(g) falls back to \$CLAUDE_PROJECT_DIR when the cwd is not in a work tree"
+else
+    fail "(g) unexpected git args: '$(cat "$GIT_ARGS_FILE" 2>/dev/null)'"
 fi
 
 # Summary--------------------------------------------------------------------

@@ -25,8 +25,9 @@
 # success (the goal state, "label absent," is already met).
 #
 # Example (the Orchestrator's "Remove: orchestrate / Add: orchestrating"
-# transition from SKILL.md, in one delta call instead of a read-then-replace):
-#   ${CLAUDE_PLUGIN_ROOT}/scripts/update_gh_labels.sh aunger gallery-button-for-pixel-camera 710 \
+# transition from the orchestrate plugin's skills/orchestrate/SKILL.md, in one
+# delta call instead of a read-then-replace; bin/ is on the Bash tool's PATH):
+#   update_gh_labels.sh aunger gallery-button-for-pixel-camera 710 \
 #     --remove orchestrate --add orchestrating
 #
 # Required environment variables:

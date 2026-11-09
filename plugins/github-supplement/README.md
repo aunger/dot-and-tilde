@@ -34,7 +34,9 @@ A helper left at its top level can be overwritten or run by another agent, which
 - A helper that reports a test result prints the worktree path and `HEAD` it ran against, and you check both before reporting.
 
 The second point is what catches a crossed result; the first only makes one rarer.
-The scratchpad hook warns about the first.
+The scratchpad hook warns about the first, after the call has run, and nothing checks the second.
+
+No agent reads this README, so a project that installs the plugin copies the two points above into its own `CLAUDE.md` or `AGENTS.md`, which every agent loads before it acts.
 
 ## Testing
 

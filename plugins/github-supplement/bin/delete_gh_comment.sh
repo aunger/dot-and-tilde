@@ -15,8 +15,8 @@
 # Usage:
 #   delete_gh_comment.sh <owner> <repo> <comment_id>
 #
-# Example:
-#   ${CLAUDE_PLUGIN_ROOT}/scripts/delete_gh_comment.sh aunger gallery-button-for-pixel-camera 4940940270
+# Example (bin/ is on the Bash tool's PATH, so the script runs by bare name):
+#   delete_gh_comment.sh aunger gallery-button-for-pixel-camera 4940940270
 #
 # Required environment variables:
 #   GITHUB_TOKEN   Token with permission to delete the comment (repo scope,

@@ -7,8 +7,9 @@
 # worktree sub-agent, gets the same scratchpad directory, so a helper one agent
 # leaves at its top level can be overwritten or run by another, which then
 # reports a result from a tree it never touched.
-# The plugin's README asks each agent to keep scratch files under a subdirectory
-# named after its worktree directory; this hook warns when a call strays from that.
+# The host project's CLAUDE.md or AGENTS.md asks each agent to keep scratch
+# files under a subdirectory named after its worktree directory (the plugin's
+# README gives the rule to copy); this hook warns when a call strays from that.
 #
 # What it checks: the Bash command, or the file_path (notebook_path for
 # NotebookEdit) of a Write or Edit, for every path that has a component named
@@ -88,6 +89,6 @@ done < <(grep -oE "$TOKEN/scratchpad$TOKEN" <<< "$TEXT")
     echo "Other sub-agents share that directory and may have written or run" \
          "anything there.  Keep your files under scratchpad/$WORKTREE/, and" \
          "before reporting a helper's result, confirm it printed this" \
-         "worktree ($CWD) and its HEAD.  See the github-supplement plugin's README."
+         "worktree ($CWD) and its HEAD."
 } >&2
 exit 2

@@ -8,6 +8,9 @@ A Claude Code plugin marketplace of personal development tooling.
 | [`github-supplement`](plugins/github-supplement/README.md) | GitHub REST helpers the MCP tools lack, on the Bash tool's `PATH`, and `PostToolUse` hooks that fetch after sub-agents, read back GitHub writes, and keep worktree agents in their own scratchpad subdirectory. |
 | [`bag-o-agents`](plugins/bag-o-agents/agents/) | General-purpose sub-agents: `deep-planner`. |
 
+The plugins were written in [aunger/gallery-button-for-pixel-camera](https://github.com/aunger/gallery-button-for-pixel-camera) (GB4PC).
+A bare issue number such as `#748` in their code and comments is a GB4PC issue, not one of this repository's; Markdown that GitHub renders spells such references out in full, as `aunger/gallery-button-for-pixel-camera#748`.
+
 ## Installing
 
 For whatever is on the default branch:

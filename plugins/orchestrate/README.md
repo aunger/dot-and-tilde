@@ -19,7 +19,7 @@ That split is what lets the plugin move to other projects, or out of this one, w
 | `skills/orch-hooks/SKILL.md`   | `/orch-hooks disengage` and `/orch-hooks engage`: switch both hooks off, or back on, for the current session. User-invoked only.                                                                 |
 | `scripts/ci_monitor/`          | The CI Monitor, with its README and tests.                                                                                                                                                       |
 | `scripts/dispatch_cost.py`     | Reports a cycle's token spend from the session transcripts, while they exist.                                                                                                                    |
-| `scripts/check_config.py`      | Validates a project configuration file; a project can run it in CI.                                                                                                                              |
+| `scripts/check_config.py`      | Validates a project configuration file, from a dot-and-tilde checkout locally or in CI (see "Project configuration").                                                                            |
 
 Every script is standard-library Python or plain bash, with its tests in a `test_*` file beside it.
 
@@ -51,7 +51,8 @@ Two hooks enforce this rather than ask for it:
 
 To switch the hooks off for a session, a person runs `/orch-hooks disengage` (`/orch-hooks engage` restores them, `/orch-hooks status` reports).
 A `UserPromptExpansion` hook makes the change: Claude Code fires that event when a person types a command, never when the model invokes one, and the skill is user-invoked only besides.
-The hook records the session id in a file under `${CLAUDE_PLUGIN_DATA}`, the directory Claude Code keeps for a plugin's state across updates; both enforcing hooks read that file first and exit before doing anything for a listed session.
+The hook records the session id in `.state/disengaged-sessions` under the plugin root; both enforcing hooks read that file first and exit before doing anything for a listed session.
+The file is not under `${CLAUDE_PLUGIN_DATA}` because the Orchestrator guard is a skill hook, and Claude Code gives a skill hook only `${CLAUDE_PLUGIN_ROOT}`; a plugin update moves the root and drops the state, which re-engages the hooks.
 Nothing else writes the file, and `scripts/hooks/protect_state.py` refuses any Bash, Monitor, Write or Edit call, in any session or agent, whose command or path names it.
 That check reads text, so it stops the obvious route rather than every route; in Orchestrator mode the guard's command allowlist covers the rest.
 Setting the environment variable `ORCHESTRATE_HOOKS_DISENGAGED` to anything but empty, `0` or `false` in Claude Code's own environment disengages the hooks for every session that has it.
@@ -77,7 +78,15 @@ Keys beginning with `_` are comments.
 | `deferred_verdict_step_regex` | no       | Monitor                       | Steps whose own `success` is not a test verdict. Regex.                                                                                                                                                                     |
 
 The five regex keys are the CI Monitor's own configuration; `scripts/ci_monitor/README.md` explains each, and the Monitor ignores every other key.
-`python3 scripts/check_config.py .claude/orchestrate.json` reports a missing or malformed key.
+`scripts/check_config.py` reports a missing or malformed key.
+An installed plugin's copy is in Claude Code's plugin cache, not in the project, so run it from a checkout of dot-and-tilde.
+From the project root, with dot-and-tilde checked out beside the project:
+
+```bash
+python3 ../dot-and-tilde/plugins/orchestrate/scripts/check_config.py .claude/orchestrate.json
+```
+
+In CI, check out `aunger/dot-and-tilde` with `actions/checkout` (`repository: aunger/dot-and-tilde`, `path: dot-and-tilde`, and `ref` set to the commit the project's marketplace pins), then run `python3 dot-and-tilde/plugins/orchestrate/scripts/check_config.py .claude/orchestrate.json`.
 
 ## Labels
 
@@ -121,9 +130,10 @@ With the plugin loaded, the Orchestrator skill's full name is `/orchestrate:orch
 ## Installing in a project
 
 1. Install this plugin and github-supplement (see "Loading" above).
-2. Write `<project>/.claude/orchestrate.json` (the table above) and run `scripts/check_config.py` over it.
+2. Write `<project>/.claude/orchestrate.json` (the table above) and check it with `scripts/check_config.py`, run from a dot-and-tilde checkout as "Project configuration" describes.
 3. Create the labels above.
 4. Say in the project's `CLAUDE.md` or `AGENTS.md` that the cycle is started with `/orchestrate <issue>`, and keep the project's own conventions there.
+   Copy github-supplement's scratchpad rule there too (its README, "Scratchpad files"): the cycle's worktree agents share one scratchpad, and no agent reads a plugin's README.
 
 A `GITHUB_TOKEN` with write access to issues and labels must be in the environment of the session; the scripts take it from there, never from the command line.
 The sessions that run the cycle need the GitHub MCP server, which the agents use for every read and write the scripts do not cover.
