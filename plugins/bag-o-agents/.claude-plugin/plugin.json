@@ -1,0 +1,14 @@
+{
+  "name": "bag-o-agents",
+  "displayName": "Bag o' agents",
+  "description": "General-purpose sub-agents, starting with deep-planner for implementation plans that benefit from deep reasoning.",
+  "author": {
+    "name": "aunger"
+  },
+  "repository": "https://github.com/aunger/dot-and-tilde",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "planning"
+  ]
+}

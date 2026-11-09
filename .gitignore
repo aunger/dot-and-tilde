@@ -1,0 +1,3 @@
+__pycache__/
+# orchestrate's per-session hook state, written under the plugin root.
+.state/

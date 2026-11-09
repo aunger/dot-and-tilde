@@ -1,0 +1,34 @@
+{
+  "description": "Fetch after each sub-agent returns, read back every GitHub MCP write and report any alteration, and warn a worktree agent that strays outside its scratchpad subdirectory.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/post-tool-use-fetch.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__github__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/post-tool-use-github-readback.sh\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/post-tool-use-scratchpad-isolation.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
