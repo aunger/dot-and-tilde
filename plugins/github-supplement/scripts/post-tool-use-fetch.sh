@@ -10,25 +10,28 @@
 
 set -uo pipefail
 
-# Fetch in the session's own checkout: the first of the hook input's cwd, the
-# project directory Claude Code exports to hooks, and $PWD that is inside a
-# git work tree.  The cwd comes first because it is where the session is
-# working, but it can be a scratchpad or other directory outside any checkout,
-# and then the project directory is the one to fetch.  The script's own path is
-# no guide, because it lives in the plugin, not in the project.
+# Fetch in the session's own checkout: the first of the project directory
+# Claude Code exports to hooks, the hook input's cwd, and $PWD that is inside a
+# git work tree.  The project directory comes first because the cwd can be in
+# another repository (a submodule, or a checkout the session cd'd into), and a
+# worktree shares its refs with the project's checkout, so fetching the project
+# loses nothing.  "Inside a work tree" means rev-parse printed "true": in a .git
+# directory or a bare repository it prints "false" and still exits 0.  The
+# script's own path is no guide, because it lives in the plugin, not in the
+# project.
 INPUT="$(cat)"
 CWD="$(jq -r '.cwd // empty' <<< "$INPUT" 2> /dev/null)"
 REPO_ROOT=""
-for candidate in "$CWD" "${CLAUDE_PROJECT_DIR:-}" "$PWD"; do
+for candidate in "${CLAUDE_PROJECT_DIR:-}" "$CWD" "$PWD"; do
     [[ -n "$candidate" ]] || continue
-    if git -C "$candidate" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    if [[ "$(git -C "$candidate" rev-parse --is-inside-work-tree 2> /dev/null)" == "true" ]]; then
         REPO_ROOT="$candidate"
         break
     fi
 done
 # With no work tree among them, try the first anyway, so the warning below says
 # the fetch failed rather than the hook staying silent.
-REPO_ROOT="${REPO_ROOT:-${CWD:-${CLAUDE_PROJECT_DIR:-$PWD}}}"
+REPO_ROOT="${REPO_ROOT:-${CLAUDE_PROJECT_DIR:-${CWD:-$PWD}}}"
 
 git -C "$REPO_ROOT" fetch --prune --quiet \
     && echo "[post-tool-use] git fetch complete" \

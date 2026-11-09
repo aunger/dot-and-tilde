@@ -859,17 +859,18 @@ class _StripAuthOnCrossHostRedirect(urllib.request.HTTPRedirectHandler):
 _RAW_OPENER = urllib.request.build_opener(_StripAuthOnCrossHostRedirect)
 
 
-def _after_https_scheme(url):
+def _after_https_scheme(url: str) -> str:
     """Return `url` without its `https://` prefix, refusing any other scheme.
 
     `urllib.request` opens `file:` and `ftp:` URLs as readily as `https:` ones,
-    and `raw=True` opens an artifact URL taken from an API response. This is a
-    copy of the check in scripts/ci/prs-and-issues/https_only.py, kept here so
-    the script stays a single file that can be copied into another repository.
+    and `raw=True` opens an artifact URL taken from an API response. The check
+    is copied rather than imported, so the script stays a single file; the
+    github-supplement plugin carries two more copies, and its
+    tests/test_helper_copies.py fails when any of the three differs.
     """
     scheme, separator, rest = url.partition("://")
     if not separator or scheme.lower() != "https" or not rest:
-        raise ValueError("refusing to open %r: only https URLs are allowed" % url)
+        raise ValueError(f"refusing to open {url!r}: only https URLs are allowed")
     return rest
 
 

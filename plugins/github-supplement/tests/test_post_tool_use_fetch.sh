@@ -3,7 +3,7 @@
 # the github-supplement plugin's scripts/post-tool-use-fetch.sh.
 #
 # The hook runs "git fetch --prune --quiet" in the session's checkout: the
-# first of the hook input's cwd and $CLAUDE_PROJECT_DIR inside a work tree.
+# first of $CLAUDE_PROJECT_DIR and the hook input's cwd inside a work tree.
 # These tests use a fake "git" on PATH to verify behaviour without
 # requiring a live network or a real remote.
 #
@@ -12,9 +12,10 @@
 #   (b) Exits 0 when git fetch succeeds
 #   (c) Exits 0 even when git fetch fails (offline-safe--never aborts session)
 #   (d) Prints a warning line when git fetch fails
-#   (e) Fetches in the hook input's cwd, not the plugin's own directory
-#   (f) Falls back to $CLAUDE_PROJECT_DIR when the input carries no cwd
-#   (g) Falls back to $CLAUDE_PROJECT_DIR when the cwd is not in a work tree
+#   (e) Fetches in $CLAUDE_PROJECT_DIR, not the hook input's cwd
+#   (f) Falls back to the input's cwd when $CLAUDE_PROJECT_DIR is not set
+#   (g) Falls back to the input's cwd when $CLAUDE_PROJECT_DIR is not in a work tree
+#   (h) Skips a git directory, where rev-parse prints "false" and exits 0
 #
 # Always exits 0 on success, non-zero on failure.
 
@@ -100,46 +101,50 @@ else
     fail "(d) no warning message found in output: '$OUTPUT'"
 fi
 
-# (e) & (f) Where the hook fetches--------------------------------------------
+# (e)-(h) Where the hook fetches---------------------------------------------
 echo ""
-echo "=== (e)-(g) fetches in the input's cwd, else \$CLAUDE_PROJECT_DIR ==="
+echo "=== (e)-(h) fetches in \$CLAUDE_PROJECT_DIR, else the input's cwd ==="
 
-# Fake git: every directory but /work/not-a-repo is a work tree; record fetches.
+# Fake git: /work/not-a-repo is outside any repository and /work/repo/.git is a
+# git directory (rev-parse prints "false" and exits 0); every other directory
+# is a work tree.  Only fetches are recorded.
 cat > "$TMP_DIR/git" << 'EOF'
 #!/usr/bin/env bash
 if [[ "$3" == "rev-parse" ]]; then
-    [[ "$2" != /work/not-a-repo ]]
-    exit
+    case "$2" in
+        /work/not-a-repo) exit 128 ;;
+        /work/repo/.git) echo false; exit 0 ;;
+        *) echo true; exit 0 ;;
+    esac
 fi
 echo "$@" >> "$GIT_ARGS_FILE"
 exit 0
 EOF
 chmod +x "$TMP_DIR/git"
 
-rm -f "$GIT_ARGS_FILE"
-PATH="$TMP_DIR:$PATH" CLAUDE_PROJECT_DIR=/work/project bash "$HOOK" <<< "$PAYLOAD" > /dev/null 2>&1
-if [[ "$(cat "$GIT_ARGS_FILE" 2>/dev/null)" == "-C /work/checkout fetch --prune --quiet" ]]; then
-    pass "(e) fetches in the input's cwd"
-else
-    fail "(e) unexpected git args: '$(cat "$GIT_ARGS_FILE" 2>/dev/null)'"
-fi
+# expect_fetch LABEL DIR PROJECT_DIR PAYLOAD: run the hook, check it fetched in DIR.
+expect_fetch() {
+    rm -f "$GIT_ARGS_FILE"
+    if [[ -n "$3" ]]; then
+        PATH="$TMP_DIR:$PATH" CLAUDE_PROJECT_DIR="$3" bash "$HOOK" <<< "$4" > /dev/null 2>&1
+    else
+        (unset CLAUDE_PROJECT_DIR; PATH="$TMP_DIR:$PATH" bash "$HOOK" <<< "$4" > /dev/null 2>&1)
+    fi
+    if [[ "$(cat "$GIT_ARGS_FILE" 2>/dev/null)" == "-C $2 fetch --prune --quiet" ]]; then
+        pass "$1"
+    else
+        fail "$1: unexpected git args: '$(cat "$GIT_ARGS_FILE" 2>/dev/null)'"
+    fi
+}
 
-rm -f "$GIT_ARGS_FILE"
-PATH="$TMP_DIR:$PATH" CLAUDE_PROJECT_DIR=/work/project bash "$HOOK" <<< '{"tool_name":"Agent"}' > /dev/null 2>&1
-if [[ "$(cat "$GIT_ARGS_FILE" 2>/dev/null)" == "-C /work/project fetch --prune --quiet" ]]; then
-    pass "(f) falls back to \$CLAUDE_PROJECT_DIR"
-else
-    fail "(f) unexpected git args: '$(cat "$GIT_ARGS_FILE" 2>/dev/null)'"
-fi
-
-rm -f "$GIT_ARGS_FILE"
-PATH="$TMP_DIR:$PATH" CLAUDE_PROJECT_DIR=/work/project bash "$HOOK" \
-    <<< '{"tool_name":"Agent","cwd":"/work/not-a-repo"}' > /dev/null 2>&1
-if [[ "$(cat "$GIT_ARGS_FILE" 2>/dev/null)" == "-C /work/project fetch --prune --quiet" ]]; then
-    pass "(g) falls back to \$CLAUDE_PROJECT_DIR when the cwd is not in a work tree"
-else
-    fail "(g) unexpected git args: '$(cat "$GIT_ARGS_FILE" 2>/dev/null)'"
-fi
+expect_fetch "(e) fetches in \$CLAUDE_PROJECT_DIR, not the input's cwd" \
+    /work/project /work/project "$PAYLOAD"
+expect_fetch "(f) falls back to the input's cwd when \$CLAUDE_PROJECT_DIR is not set" \
+    /work/checkout "" "$PAYLOAD"
+expect_fetch "(g) falls back to the input's cwd when \$CLAUDE_PROJECT_DIR is not in a work tree" \
+    /work/checkout /work/not-a-repo "$PAYLOAD"
+expect_fetch "(h) skips a git directory, where rev-parse prints false" \
+    /work/checkout /work/repo/.git "$PAYLOAD"
 
 # Summary--------------------------------------------------------------------
 echo ""

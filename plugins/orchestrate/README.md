@@ -52,7 +52,7 @@ Two hooks enforce this rather than ask for it:
 To switch the hooks off for a session, a person runs `/orch-hooks disengage` (`/orch-hooks engage` restores them, `/orch-hooks status` reports).
 A `UserPromptExpansion` hook makes the change: Claude Code fires that event when a person types a command, never when the model invokes one, and the skill is user-invoked only besides.
 The hook records the session id in `.state/disengaged-sessions` under the plugin root; both enforcing hooks read that file first and exit before doing anything for a listed session.
-The file is not under `${CLAUDE_PLUGIN_DATA}` because the Orchestrator guard is a skill hook, and Claude Code gives a skill hook only `${CLAUDE_PLUGIN_ROOT}`; a plugin update moves the root and drops the state, which re-engages the hooks.
+The file is not under `${CLAUDE_PLUGIN_DATA}` because the Orchestrator guard is a skill hook, and Claude Code gives a skill hook only `${CLAUDE_PLUGIN_ROOT}`; under a marketplace install an update moves the root and drops the state, which re-engages the hooks, while a plugin loaded from a fixed directory keeps it.
 Nothing else writes the file, and `scripts/hooks/protect_state.py` refuses any Bash, Monitor, Write or Edit call, in any session or agent, whose command or path names it.
 That check reads text, so it stops the obvious route rather than every route; in Orchestrator mode the guard's command allowlist covers the rest.
 Setting the environment variable `ORCHESTRATE_HOOKS_DISENGAGED` to anything but empty, `0` or `false` in Claude Code's own environment disengages the hooks for every session that has it.
@@ -80,13 +80,15 @@ Keys beginning with `_` are comments.
 The five regex keys are the CI Monitor's own configuration; `scripts/ci_monitor/README.md` explains each, and the Monitor ignores every other key.
 `scripts/check_config.py` reports a missing or malformed key.
 An installed plugin's copy is in Claude Code's plugin cache, not in the project, so run it from a checkout of dot-and-tilde.
-From the project root, with dot-and-tilde checked out beside the project:
+From the root of a project that has dot-and-tilde as a submodule at `.claude/dot-and-tilde`, as gallery-button-for-pixel-camera does:
 
 ```bash
-python3 ../dot-and-tilde/plugins/orchestrate/scripts/check_config.py .claude/orchestrate.json
+python3 .claude/dot-and-tilde/plugins/orchestrate/scripts/check_config.py .claude/orchestrate.json
 ```
 
-In CI, check out `aunger/dot-and-tilde` with `actions/checkout` (`repository: aunger/dot-and-tilde`, `path: dot-and-tilde`, and `ref` set to the commit the project's marketplace pins), then run `python3 dot-and-tilde/plugins/orchestrate/scripts/check_config.py .claude/orchestrate.json`.
+With dot-and-tilde checked out elsewhere, use that checkout's `plugins/orchestrate/scripts/check_config.py`.
+In CI, a submodule checkout (`actions/checkout` with `submodules: true`) puts the script at the same path.
+Without a submodule, check out `aunger/dot-and-tilde` with a second `actions/checkout` step after the project's own, which would otherwise delete it (`repository: aunger/dot-and-tilde`, `path: dot-and-tilde`, and `ref` set to the commit the project's marketplace pins), then run `python3 dot-and-tilde/plugins/orchestrate/scripts/check_config.py .claude/orchestrate.json`.
 
 ## Labels
 

@@ -80,9 +80,9 @@ API_ROOT = "https://api.github.com"
 # copies of code in aunger/gallery-button-for-pixel-camera's
 # scripts/ci/prs-and-issues/ (github_headers.py, https_only.py and
 # session_bylines.py).  The plugin stays a set of single files with no imports
-# from outside it.  bin/link_gh_issues.py carries the same three helpers, and
-# tests/test_helper_copies.py fails when the two copies differ; a change to the
-# originals, the byline pattern most of all, has to be copied here by hand.
+# from outside it.  tests/test_helper_copies.py checks the three helpers
+# against bin/link_gh_issues.py's copies; nothing checks BYLINE_RE, so a change
+# to GB4PC's byline pattern, or to any of the originals, is copied here by hand.
 
 
 def github_headers(token: str) -> dict[str, str]:

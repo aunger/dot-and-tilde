@@ -21,8 +21,10 @@ Orchestrator guard runs as a skill hook (skills/orchestrate/SKILL.md), and
 Claude Code gives a skill hook only ${CLAUDE_PLUGIN_ROOT}: the variable is
 unset in its process, and a skill hook command that names it does not run.
 Every reader and the writer derive the path from this file's location, so
-they agree wherever the plugin is installed. An update moves the plugin root
-and so drops the state, which re-engages the hooks: the safe direction.
+they agree wherever the plugin is installed. Under a marketplace install an
+update moves the plugin root and so drops the state, which re-engages the
+hooks: the safe direction. A plugin loaded from a fixed directory keeps it,
+and the file only grows, by one session id per disengaged session.
 
 Only a person changes the state. This script runs as the plugin's
 UserPromptExpansion hook (hooks/hooks.json), which Claude Code fires when a

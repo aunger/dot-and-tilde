@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""The plugin's two copies of the shared GitHub helpers are the same code.
+"""dot-and-tilde's copies of the shared GitHub helpers are the same code.
 
 bin/link_gh_issues.py and scripts/verify_github_write.py each carry their own
-github_headers(), _after_https_scheme() and https_request(), so that each stays
-a single file with nothing to import from outside the plugin. This test fails
-when the two copies stop being the same code, so a change to one reaches the
-other.
+github_headers(), _after_https_scheme() and https_request(), and the
+orchestrate plugin's scripts/ci_monitor/ci_monitor.py carries a third
+_after_https_scheme(), so that each stays a single file with nothing to import
+from outside its plugin. This test fails when any two copies stop being the
+same code, so a change to one, a fix to the https-only check above all, reaches
+the others. It reaches into orchestrate because both plugins live in this
+repository and its CI runs every plugin's tests.
 
 Docstrings are left out of the comparison: each copy's may say where it came
-from. Both are copies of aunger/gallery-button-for-pixel-camera's
+from. The helpers are copies of aunger/gallery-button-for-pixel-camera's
 scripts/ci/prs-and-issues/, which this test cannot reach; a change there is
-copied here by hand.
+copied here by hand. So is the byline pattern, BYLINE_RE in
+verify_github_write.py, which has no second copy here to compare.
 """
 
 import ast
@@ -18,11 +22,17 @@ import os
 import unittest
 
 PLUGIN_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-COPIES = (
-    os.path.join(PLUGIN_ROOT, "bin", "link_gh_issues.py"),
-    os.path.join(PLUGIN_ROOT, "scripts", "verify_github_write.py"),
+LINK = os.path.join(PLUGIN_ROOT, "bin", "link_gh_issues.py")
+VERIFY = os.path.join(PLUGIN_ROOT, "scripts", "verify_github_write.py")
+CI_MONITOR = os.path.join(
+    PLUGIN_ROOT, "..", "orchestrate", "scripts", "ci_monitor", "ci_monitor.py"
 )
-SHARED = ("github_headers", "_after_https_scheme", "https_request")
+# function name -> the files that carry a copy of it
+COPIES = {
+    "github_headers": (LINK, VERIFY),
+    "_after_https_scheme": (LINK, VERIFY, CI_MONITOR),
+    "https_request": (LINK, VERIFY),
+}
 
 
 def function_without_docstring(path, name):
@@ -44,16 +54,17 @@ def function_without_docstring(path, name):
 
 
 class TestHelperCopies(unittest.TestCase):
-    def test_the_two_copies_match(self):
-        first, second = COPIES
-        for name in SHARED:
-            with self.subTest(function=name):
-                self.assertEqual(
-                    function_without_docstring(first, name),
-                    function_without_docstring(second, name),
-                    "%s differs between bin/link_gh_issues.py and scripts/verify_github_write.py"
-                    % name,
-                )
+    def test_every_copy_matches_the_first(self):
+        for name, paths in COPIES.items():
+            first = paths[0]
+            for other in paths[1:]:
+                with self.subTest(function=name, copy=os.path.relpath(other, PLUGIN_ROOT)):
+                    self.assertEqual(
+                        function_without_docstring(other, name),
+                        function_without_docstring(first, name),
+                        "%s in %s differs from bin/link_gh_issues.py's"
+                        % (name, os.path.relpath(other, PLUGIN_ROOT)),
+                    )
 
 
 if __name__ == "__main__":

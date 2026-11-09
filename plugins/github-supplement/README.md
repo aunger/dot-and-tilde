@@ -21,7 +21,7 @@ Each script's header documents its arguments and exit codes.
 
 | Matcher | Script | What it does |
 | --- | --- | --- |
-| `Agent` | `scripts/post-tool-use-fetch.sh` | Runs `git fetch --prune` in the session's checkout after each sub-agent returns, so the session sees what the sub-agent pushed. Never fails the call. |
+| `Agent` | `scripts/post-tool-use-fetch.sh` | Runs `git fetch --prune` in the project's checkout (else the session's cwd) after each sub-agent returns, so the session sees what the sub-agent pushed. Never fails the call. |
 | `mcp__github__.*` | `scripts/post-tool-use-github-readback.sh` | Reads back the text of every GitHub write and reports any difference from what was sent, or that it could not check. `scripts/verify_github_write.py` does the work. |
 | `Bash\|Write\|Edit\|NotebookEdit` | `scripts/post-tool-use-scratchpad-isolation.sh` | Warns a worktree sub-agent that reached the shared scratchpad outside its own subdirectory (see below). |
 
