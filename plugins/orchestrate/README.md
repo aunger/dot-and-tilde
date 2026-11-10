@@ -79,24 +79,26 @@ Keys beginning with `_` are comments.
 
 The five regex keys are the CI Monitor's own configuration; `scripts/ci_monitor/README.md` explains each, and the Monitor ignores every other key.
 `scripts/check_config.py` reports a missing or malformed key.
-Like every script here (see "Layout"), it runs as a single file from wherever it is: a checkout of dot-and-tilde, the installed plugin's directory (the `installPath` that `claude plugin list --json` reports), or a copy fetched alone.
-To check against the commit a project's marketplace pins, without checking out dot-and-tilde, fetch that one commit into a throwaway bare repository and run the script from it.
-From the root of gallery-button-for-pixel-camera, whose marketplace is `.claude/gb4pc-tools/.claude-plugin/marketplace.json`:
+It imports only the standard library and nothing beside it, so it runs as a single file from wherever it is: a checkout of dot-and-tilde, the installed plugin's directory (the `installPath` that `claude plugin list --json` reports), or a copy fetched alone.
+To check against the commit a project's marketplace pins, without checking out dot-and-tilde, fetch the script at that commit and run it.
+From the root of gallery-button-for-pixel-camera, whose marketplace is `.claude/gb4pc-tools/.claude-plugin/marketplace.json` (added in aunger/gallery-button-for-pixel-camera#1390):
 
 ```bash
 marketplace=.claude/gb4pc-tools/.claude-plugin/marketplace.json
-read -r url path sha < <(python3 -c 'import json, sys; print(*(p["source"][k] for p in json.load(open(sys.argv[1]))["plugins"] if p["name"] == "orchestrate" for k in ("url", "path", "sha")))' "$marketplace")
-git_dir=$(mktemp -d)/dot-and-tilde.git
-git init -q --bare "$git_dir"
-git --git-dir "$git_dir" fetch -q --depth 1 "https://github.com/$url.git" "$sha"
-git --git-dir "$git_dir" show "FETCH_HEAD:$path/scripts/check_config.py" | python3 - .claude/orchestrate.json
+url=$(python3 -c '
+import json, sys
+[source] = [p["source"] for p in json.load(open(sys.argv[1]))["plugins"] if p["name"] == "orchestrate"]
+print("https://raw.githubusercontent.com/{url}/{sha}/{path}/scripts/check_config.py".format(**source))
+' "$marketplace") &&
+script=$(curl -fsSL "$url") &&
+python3 -c "$script" .claude/orchestrate.json
 ```
 
-The url, path and sha come from the marketplace's `orchestrate` entry, so a project that pins a fork or another path checks the script it installs.
-The separate bare repository keeps the fetch out of the project's own `.git`, and works outside any repository.
-GitHub serves a commit by SHA only while a branch or tag reaches it, so pin a commit on dot-and-tilde's `main`: a commit left only on a deleted branch stops fetching.
+It exits non-zero if the marketplace has no single `orchestrate` entry, if the fetch fails, or if the check does.
+It expects a `git-subdir` source whose `url` is a GitHub `OWNER/REPO` and which pins a `sha`, as gallery-button-for-pixel-camera's entries are; with those, a project that pins a fork or another path checks the script it installs.
+Pin a commit on dot-and-tilde's `main`: a commit that no branch, tag or pull request reaches any longer, after a force-push for instance, can be garbage-collected and stop fetching.
 This checks the pinned commit, which is what a fresh install gets; an existing install stays on its old commit until the marketplace and the plugin are updated.
-gallery-button-for-pixel-camera's `scripts/test_orchestrate_config.py` does the same fetch in its tests (from aunger/gallery-button-for-pixel-camera#1390).
+gallery-button-for-pixel-camera's `scripts/test_orchestrate_config.py` runs the same check in its tests, fetching the script its own way.
 
 ## Labels
 
