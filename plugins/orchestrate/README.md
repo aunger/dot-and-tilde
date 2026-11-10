@@ -19,7 +19,7 @@ That split is what lets the plugin move to other projects, or out of this one, w
 | `skills/orch-hooks/SKILL.md`   | `/orch-hooks disengage` and `/orch-hooks engage`: switch both hooks off, or back on, for the current session. User-invoked only.                                                                 |
 | `scripts/ci_monitor/`          | The CI Monitor, with its README and tests.                                                                                                                                                       |
 | `scripts/dispatch_cost.py`     | Reports a cycle's token spend from the session transcripts, while they exist.                                                                                                                    |
-| `scripts/check_config.py`      | Validates a project configuration file, from a dot-and-tilde checkout locally or in CI (see "Project configuration").                                                                            |
+| `scripts/check_config.py`      | Validates a project configuration file; it runs as a single file, so a project's CI can fetch it alone (see "Project configuration").                                                            |
 
 Every script is standard-library Python or plain bash, with its tests in a `test_*` file beside it.
 
@@ -79,16 +79,26 @@ Keys beginning with `_` are comments.
 
 The five regex keys are the CI Monitor's own configuration; `scripts/ci_monitor/README.md` explains each, and the Monitor ignores every other key.
 `scripts/check_config.py` reports a missing or malformed key.
-An installed plugin's copy is in Claude Code's plugin cache, not in the project, so run it from a checkout of dot-and-tilde.
-From the root of a project that has dot-and-tilde as a submodule at `.claude/dot-and-tilde`, as gallery-button-for-pixel-camera does:
+It imports only the standard library and nothing beside it, so it runs as a single file from wherever it is: a checkout of dot-and-tilde, the installed plugin's directory (the `installPath` that `claude plugin list --json` reports), or a copy fetched alone.
+To check against the commit a project's marketplace pins, without checking out dot-and-tilde, fetch the script at that commit and run it.
+From the root of gallery-button-for-pixel-camera, whose marketplace is `.claude/gb4pc-tools/.claude-plugin/marketplace.json` (added in aunger/gallery-button-for-pixel-camera#1390):
 
 ```bash
-python3 .claude/dot-and-tilde/plugins/orchestrate/scripts/check_config.py .claude/orchestrate.json
+marketplace=.claude/gb4pc-tools/.claude-plugin/marketplace.json
+url=$(python3 -c '
+import json, sys
+[source] = [p["source"] for p in json.load(open(sys.argv[1]))["plugins"] if p["name"] == "orchestrate"]
+print("https://raw.githubusercontent.com/{url}/{sha}/{path}/scripts/check_config.py".format(**source))
+' "$marketplace") &&
+script=$(curl -fsSL "$url") &&
+python3 -c "$script" .claude/orchestrate.json
 ```
 
-With dot-and-tilde checked out elsewhere, use that checkout's `plugins/orchestrate/scripts/check_config.py`.
-In CI, a submodule checkout (`actions/checkout` with `submodules: true`) puts the script at the same path.
-Without a submodule, check out `aunger/dot-and-tilde` with a second `actions/checkout` step after the project's own, which would otherwise delete it (`repository: aunger/dot-and-tilde`, `path: dot-and-tilde`, and `ref` set to the commit the project's marketplace pins), then run `python3 dot-and-tilde/plugins/orchestrate/scripts/check_config.py .claude/orchestrate.json`.
+It exits non-zero if the marketplace has no single `orchestrate` entry, if the fetch fails, or if the check does.
+It expects a `git-subdir` source whose `url` is a GitHub `OWNER/REPO` and which pins a `sha`, as gallery-button-for-pixel-camera's entries are; with those, a project that pins a fork or another path checks the script it installs.
+Pin a commit on dot-and-tilde's `main`: a commit that no branch, tag or pull request reaches any longer, after a force-push for instance, can be garbage-collected and stop fetching.
+This checks the pinned commit, which is what a fresh install gets; an existing install stays on its old commit until the marketplace and the plugin are updated.
+gallery-button-for-pixel-camera's `scripts/test_orchestrate_config.py` runs the same check in its tests, fetching the script its own way.
 
 ## Labels
 
@@ -132,7 +142,7 @@ With the plugin loaded, the Orchestrator skill's full name is `/orchestrate:orch
 ## Installing in a project
 
 1. Install this plugin and github-supplement (see "Loading" above).
-2. Write `<project>/.claude/orchestrate.json` (the table above) and check it with `scripts/check_config.py`, run from a dot-and-tilde checkout as "Project configuration" describes.
+2. Write `<project>/.claude/orchestrate.json` (the table above) and check it with `scripts/check_config.py` (see "Project configuration").
 3. Create the labels above.
 4. Say in the project's `CLAUDE.md` or `AGENTS.md` that the cycle is started with `/orchestrate <issue>`, and keep the project's own conventions there.
    Copy github-supplement's scratchpad rule there too (its README, "Scratchpad files"): the cycle's worktree agents share one scratchpad, and no agent reads a plugin's README.
