@@ -19,7 +19,7 @@ That split is what lets the plugin move to other projects, or out of this one, w
 | `skills/orch-hooks/SKILL.md`   | `/orch-hooks disengage` and `/orch-hooks engage`: switch both hooks off, or back on, for the current session. User-invoked only.                                                                 |
 | `scripts/ci_monitor/`          | The CI Monitor, with its README and tests.                                                                                                                                                       |
 | `scripts/dispatch_cost.py`     | Reports a cycle's token spend from the session transcripts, while they exist.                                                                                                                    |
-| `scripts/check_config.py`      | Validates a project configuration file, from a dot-and-tilde checkout locally or in CI (see "Project configuration").                                                                            |
+| `scripts/check_config.py`      | Validates a project configuration file; it runs as a single file, so a project's CI can fetch it alone (see "Project configuration").                                                            |
 
 Every script is standard-library Python or plain bash, with its tests in a `test_*` file beside it.
 
@@ -79,9 +79,24 @@ Keys beginning with `_` are comments.
 
 The five regex keys are the CI Monitor's own configuration; `scripts/ci_monitor/README.md` explains each, and the Monitor ignores every other key.
 `scripts/check_config.py` reports a missing or malformed key.
-It imports only the standard library, so it runs as a single file from wherever it is: a checkout of dot-and-tilde, the installed plugin's directory (the `installPath` that `claude plugin list --json` reports), or a copy fetched alone.
-A project's CI can check its file against the version it installs without checking out dot-and-tilde: fetch the one commit the project's marketplace pins (`git fetch --depth 1` of that SHA from `https://github.com/aunger/dot-and-tilde.git`), take the script with `git show FETCH_HEAD:plugins/orchestrate/scripts/check_config.py`, and run it on `.claude/orchestrate.json`.
-gallery-button-for-pixel-camera's `scripts/test_orchestrate_config.py` does this.
+Like every script here (see "Layout"), it runs as a single file from wherever it is: a checkout of dot-and-tilde, the installed plugin's directory (the `installPath` that `claude plugin list --json` reports), or a copy fetched alone.
+To check against the commit a project's marketplace pins, without checking out dot-and-tilde, fetch that one commit into a throwaway bare repository and run the script from it.
+From the root of gallery-button-for-pixel-camera, whose marketplace is `.claude/gb4pc-tools/.claude-plugin/marketplace.json`:
+
+```bash
+marketplace=.claude/gb4pc-tools/.claude-plugin/marketplace.json
+read -r url path sha < <(python3 -c 'import json, sys; print(*(p["source"][k] for p in json.load(open(sys.argv[1]))["plugins"] if p["name"] == "orchestrate" for k in ("url", "path", "sha")))' "$marketplace")
+git_dir=$(mktemp -d)/dot-and-tilde.git
+git init -q --bare "$git_dir"
+git --git-dir "$git_dir" fetch -q --depth 1 "https://github.com/$url.git" "$sha"
+git --git-dir "$git_dir" show "FETCH_HEAD:$path/scripts/check_config.py" | python3 - .claude/orchestrate.json
+```
+
+The url, path and sha come from the marketplace's `orchestrate` entry, so a project that pins a fork or another path checks the script it installs.
+The separate bare repository keeps the fetch out of the project's own `.git`, and works outside any repository.
+GitHub serves a commit by SHA only while a branch or tag reaches it, so pin a commit on dot-and-tilde's `main`: a commit left only on a deleted branch stops fetching.
+This checks the pinned commit, which is what a fresh install gets; an existing install stays on its old commit until the marketplace and the plugin are updated.
+gallery-button-for-pixel-camera's `scripts/test_orchestrate_config.py` does the same fetch in its tests (from aunger/gallery-button-for-pixel-camera#1390).
 
 ## Labels
 
