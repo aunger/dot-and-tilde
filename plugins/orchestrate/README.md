@@ -79,16 +79,9 @@ Keys beginning with `_` are comments.
 
 The five regex keys are the CI Monitor's own configuration; `scripts/ci_monitor/README.md` explains each, and the Monitor ignores every other key.
 `scripts/check_config.py` reports a missing or malformed key.
-An installed plugin's copy is in Claude Code's plugin cache, not in the project, so run it from a checkout of dot-and-tilde.
-From the root of a project that has dot-and-tilde as a submodule at `.claude/dot-and-tilde`, as gallery-button-for-pixel-camera does:
-
-```bash
-python3 .claude/dot-and-tilde/plugins/orchestrate/scripts/check_config.py .claude/orchestrate.json
-```
-
-With dot-and-tilde checked out elsewhere, use that checkout's `plugins/orchestrate/scripts/check_config.py`.
-In CI, a submodule checkout (`actions/checkout` with `submodules: true`) puts the script at the same path.
-Without a submodule, check out `aunger/dot-and-tilde` with a second `actions/checkout` step after the project's own, which would otherwise delete it (`repository: aunger/dot-and-tilde`, `path: dot-and-tilde`, and `ref` set to the commit the project's marketplace pins), then run `python3 dot-and-tilde/plugins/orchestrate/scripts/check_config.py .claude/orchestrate.json`.
+It imports only the standard library, so it runs as a single file from wherever it is: a checkout of dot-and-tilde, the installed plugin's directory (the `installPath` that `claude plugin list --json` reports), or a copy fetched alone.
+A project's CI can check its file against the version it installs without checking out dot-and-tilde: fetch the one commit the project's marketplace pins (`git fetch --depth 1` of that SHA from `https://github.com/aunger/dot-and-tilde.git`), take the script with `git show FETCH_HEAD:plugins/orchestrate/scripts/check_config.py`, and run it on `.claude/orchestrate.json`.
+gallery-button-for-pixel-camera's `scripts/test_orchestrate_config.py` does this.
 
 ## Labels
 
@@ -132,7 +125,7 @@ With the plugin loaded, the Orchestrator skill's full name is `/orchestrate:orch
 ## Installing in a project
 
 1. Install this plugin and github-supplement (see "Loading" above).
-2. Write `<project>/.claude/orchestrate.json` (the table above) and check it with `scripts/check_config.py`, run from a dot-and-tilde checkout as "Project configuration" describes.
+2. Write `<project>/.claude/orchestrate.json` (the table above) and check it with `scripts/check_config.py` (see "Project configuration").
 3. Create the labels above.
 4. Say in the project's `CLAUDE.md` or `AGENTS.md` that the cycle is started with `/orchestrate <issue>`, and keep the project's own conventions there.
    Copy github-supplement's scratchpad rule there too (its README, "Scratchpad files"): the cycle's worktree agents share one scratchpad, and no agent reads a plugin's README.
