@@ -1,3 +1,8 @@
+---
+name: pr-creation
+description: Conventions for opening a pull request. Whether a PR is warranted at all, one topic per PR, a title that names the solution, a description written as the permanent record of the change, test-plan checkboxes only for what CI does not do, and no bylines. Use before creating a pull request or editing its title or description.
+---
+
 # PR creation
 
 ## A PR is not always required

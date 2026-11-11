@@ -1,3 +1,8 @@
+---
+name: code-edit
+description: Conventions for editing code in a repository. Keep changes simple, split commits by concern with refactoring apart from behavior changes, pin third-party dependencies to commit SHAs, accompany new behavior with tests, and build, test and re-check prose against the code before finishing. Use whenever you edit code.
+---
+
 # Code edits
 
 ## Prefer simple code

@@ -1,0 +1,16 @@
+{
+  "name": "agent-citizenship",
+  "displayName": "Agent citizenship",
+  "description": "Skills for working well in a shared repository: editing code, opening a pull request, and writing issue descriptions and comments.",
+  "author": {
+    "name": "aunger"
+  },
+  "repository": "https://github.com/aunger/dot-and-tilde",
+  "license": "MIT",
+  "keywords": [
+    "conventions",
+    "commits",
+    "pull-requests",
+    "writing"
+  ]
+}

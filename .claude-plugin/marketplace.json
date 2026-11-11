@@ -1,6 +1,6 @@
 {
   "name": "dot-and-tilde",
-  "description": "Personal Claude Code plugins: a multi-agent development cycle for GitHub issues, GitHub helpers and hooks it depends on, and general-purpose agents.",
+  "description": "Personal Claude Code plugins: a multi-agent development cycle for GitHub issues, GitHub helpers and hooks it depends on, general-purpose agents, and skills for editing code, opening pull requests and writing issues.",
   "owner": { "name": "aunger" },
   "plugins": [
     {
@@ -17,6 +17,11 @@
       "name": "bag-o-agents",
       "source": "./plugins/bag-o-agents",
       "description": "General-purpose sub-agents, starting with deep-planner."
+    },
+    {
+      "name": "agent-citizenship",
+      "source": "./plugins/agent-citizenship",
+      "description": "Skills for editing code, opening a pull request, and writing issue descriptions and comments."
     }
   ]
 }

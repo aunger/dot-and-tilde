@@ -1,3 +1,8 @@
+---
+name: writing
+description: Conventions for writing GitHub issue descriptions and comments for whoever picks the work up. Lead with evidence and say what was verified, cut what does not change what the reader does, record decisions with the options rejected, and make blocking relations and open questions explicit. Use when writing or editing an issue description or a comment.
+---
+
 # Writing Prose for issue descriptions and comments
 
 Issues and comments are read by whoever picks the work up.
