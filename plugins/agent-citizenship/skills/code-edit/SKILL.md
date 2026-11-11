@@ -1,6 +1,6 @@
 ---
 name: code-edit
-description: Conventions for editing code in a repository. Keep changes simple, split commits by concern with refactoring apart from behavior changes, pin third-party dependencies to commit SHAs, accompany new behavior with tests, and build, test and re-check prose against the code before finishing. Use whenever you edit code.
+description: Conventions for editing code in a repository. Keep changes simple, split commits by concern with refactoring apart from behavior changes, pin third-party Actions and hook repos to commit SHAs, accompany new behavior with tests, and build, test and re-check prose against the code before finishing. Use whenever you edit code.
 ---
 
 # Code edits
@@ -19,7 +19,7 @@ description: Conventions for editing code in a repository. Keep changes simple, 
 
 ## Dependency versions
 
-- This section applies to third-party dependencies: anything not published directly by GitHub itself (the `actions/` and `github/` GitHub Actions namespaces are first-party and exempt). It covers third-party GitHub Actions and pre-commit hook repos, regardless of how well-known or trusted the publisher is.
+- This section applies to third-party dependencies a project references by a git ref: GitHub Actions and git-hosted hook repos such as pre-commit's, regardless of how well-known or trusted the publisher is. Actions published directly by GitHub itself (the `actions/` and `github/` namespaces) are first-party and exempt. Packages from a registry (npm, PyPI, Maven and the like) are outside this section; pin them the way the project's lockfiles or build files already do.
 - Every such dependency version must be pinned to a commit SHA (never a range, a tag, or an unpinned "latest"). A tag is not a valid pin; unlike a commit SHA, a tag can be moved to point at a different commit after the fact, so it is not truly immutable.
 - When you newly introduce or update a pin, pin to a recent version, not an old one you happen to already know. Check what is current before picking a version, and pin the latest patch build of whichever minor/major version you choose. This does not obligate you to bump every existing pin in a file just because you touched it; only the ones you are adding or intentionally updating.
 - Converting an existing pin from a tag to the equivalent commit SHA, without changing which version it points to, is not itself an "update" for this purpose. Only pin an unfamiliar or newer version when you are intentionally changing which version is used.

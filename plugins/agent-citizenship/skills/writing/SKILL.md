@@ -48,4 +48,5 @@ Do not resolve them by guess.
 
 Follow the project's prose style rules; its `CLAUDE.md` or `AGENTS.md` names them.
 
-Post and edit through the GitHub MCP server's tools, not `curl` or `gh api`, wherever it has a tool for the write.
+Where the project installs the github-supplement plugin, post and edit through the GitHub MCP server's tools, not `curl` or `gh api`, wherever the server has a tool for the write.
+The plugin's read-back hook checks the stored text of MCP writes only, so an alteration of text sent any other way goes unreported.
