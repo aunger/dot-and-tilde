@@ -19,7 +19,7 @@ description: Conventions for editing code in a repository. Keep changes simple, 
 
 ## Dependency versions
 
-- This section applies to third-party dependencies: anything not published directly by GitHub itself (the `actions/` and `github/` GitHub Actions namespaces are first-party and exempt). It covers third-party GitHub Actions (for example `android-actions/setup-android`, `softprops/action-gh-release`) and pre-commit hook repos (for example `astral-sh/ruff-pre-commit`), regardless of how well-known or trusted the publisher is.
+- This section applies to third-party dependencies: anything not published directly by GitHub itself (the `actions/` and `github/` GitHub Actions namespaces are first-party and exempt). It covers third-party GitHub Actions and pre-commit hook repos, regardless of how well-known or trusted the publisher is.
 - Every such dependency version must be pinned to a commit SHA (never a range, a tag, or an unpinned "latest"). A tag is not a valid pin; unlike a commit SHA, a tag can be moved to point at a different commit after the fact, so it is not truly immutable.
 - When you newly introduce or update a pin, pin to a recent version, not an old one you happen to already know. Check what is current before picking a version, and pin the latest patch build of whichever minor/major version you choose. This does not obligate you to bump every existing pin in a file just because you touched it; only the ones you are adding or intentionally updating.
 - Converting an existing pin from a tag to the equivalent commit SHA, without changing which version it points to, is not itself an "update" for this purpose. Only pin an unfamiliar or newer version when you are intentionally changing which version is used.
@@ -34,8 +34,7 @@ description: Conventions for editing code in a repository. Keep changes simple, 
 ## Finish well
 
 - If you are a sub-agent and were given a branch or branch name, commit your changes before you return.
-- Build locally, execute the unit tests, and run Android Lint (`./gradlew :app:lintDebug`). Don't make someone else do it for you or wait for CI.
-  Lint fails on any warning, and Gradle's failure message names only the first finding; read all of them in `app/build/reports/lint-results-debug.txt`.
+- Build locally, and run the unit tests and the project's linters. Don't make someone else do it for you or wait for CI.
 - **Re-verify the prose against the code.** After your last code change of a round, re-read every prose claim it touches (docstrings, code comments, the PR title and description, issue text you wrote) and confirm each is still true of the code *as it now stands*.
   No test checks prose, so a claim the code has outgrown reaches review unless you look for it.
   - Line numbers, counts and quantities, names of files, paths and symbols, and absolutes ("always", "never") rot first.

@@ -9,8 +9,8 @@ Issues and comments are read by whoever picks the work up.
 Write them for that reader.
 
 A PR description is a different artifact and is not covered here.
-After merge it is this repository's record of the change, so the narrative these rules cut is part of its value.
-`pr_creation.md` governs PR descriptions.
+After merge it is the repository's record of the change, so the narrative these rules cut is part of its value.
+The `pr-creation` skill governs PR descriptions.
 
 ## Lead with evidence
 
@@ -46,7 +46,6 @@ Do not resolve them by guess.
 
 ## Mechanics
 
-See `.claude/rules/prose-style.md`.
+Follow the project's prose style rules; its `CLAUDE.md` or `AGENTS.md` names them.
 
 Post and edit through the GitHub MCP server's tools, not `curl` or `gh api`, wherever it has a tool for the write.
-github-supplement's read-back hook checks the stored text of MCP writes only, so an alteration of text sent any other way goes unreported.
