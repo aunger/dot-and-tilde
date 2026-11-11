@@ -27,7 +27,7 @@ description: Conventions for editing code in a repository. Keep changes simple, 
 ## Test coverage
 
 - New behavior must be accompanied by automated tests.
-- You should not modify the requirements of existing tests, unless necessary. If your change loosened a test's retirements, you must declare each instance of this in your comment message and PR text, on its own line.
+- You should not modify the requirements of existing tests, unless necessary. If your change loosened a test's requirements, you must declare each instance of this in your commit message and PR text, on its own line.
   - For example, *Modified test `pocket_square_is_a_square` to allow circles in addition to squares, because they are more round.*
 - Existing tests must not be deleted or silently disabled to make a change compile.
 
