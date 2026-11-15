@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # The action pins in .github/workflows: aunger/vcs-automation's
+  # run-python-tests at a full commit SHA, which only an update here moves, and
+  # GitHub's own actions at major tags.
+  # One group, so a week's bumps arrive as one pull request.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "11:00"
+      timezone: "UTC"
+    groups:
+      actions:
+        patterns:
+          - "*"
