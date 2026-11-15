@@ -11,10 +11,10 @@ the others. It reaches into orchestrate because both plugins live in this
 repository and its CI runs every plugin's tests.
 
 Docstrings are left out of the comparison: each copy's may say where it came
-from. The helpers are copies of aunger/gallery-button-for-pixel-camera's
-scripts/ci/prs-and-issues/, which this test cannot reach; a change there is
-copied here by hand. So is the byline pattern, BYLINE_RE in
-verify_github_write.py, which has no second copy here to compare.
+from. The helpers are copies of aunger/vcs-automation's shared/, which this
+test does not reach; vcs-automation's shared/test_plugin_copies.py compares
+them, and the byline pattern BYLINE_RE in verify_github_write.py, with its own
+at a commit of this repository it pins.
 """
 
 import ast

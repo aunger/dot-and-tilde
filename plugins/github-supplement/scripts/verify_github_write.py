@@ -77,12 +77,15 @@ API_ROOT = "https://api.github.com"
 
 
 # The three helpers below, and BYLINE_RE and strip_bylines() after them, are
-# copies of code in aunger/gallery-button-for-pixel-camera's
-# scripts/ci/prs-and-issues/ (github_headers.py, https_only.py and
-# session_bylines.py).  The plugin stays a set of single files with no imports
-# from outside it.  tests/test_helper_copies.py checks the three helpers
-# against bin/link_gh_issues.py's copies; nothing checks BYLINE_RE, so a change
-# to GB4PC's byline pattern, or to any of the originals, is copied here by hand.
+# copies of code in aunger/vcs-automation's shared/ (github_headers.py,
+# https_only.py and session_bylines.py).  The plugin stays a set of single files
+# with no imports from outside it.  tests/test_helper_copies.py checks the three
+# helpers against bin/link_gh_issues.py's copies.  vcs-automation's
+# shared/test_plugin_copies.py checks all five against its own, at a commit of
+# this repository it pins, so a change is made here first and lands there with
+# a bump of that pin.  BYLINE_RE must keep matching the bylines vcs-automation's
+# strip-session-bylines action removes, or this hook reports a mismatch for
+# every byline stripped.
 
 
 def github_headers(token: str) -> dict[str, str]:
