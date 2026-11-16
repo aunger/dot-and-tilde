@@ -1,7 +1,8 @@
 name: Test
 
 # Validates the marketplace and every plugin manifest, and runs each plugin's
-# tests. Every command here is one the README's Testing section lists.
+# tests. The README's Testing section runs the same checks locally, with
+# vcs-automation's run_tests.sh at the commit the uses: line below pins.
 
 on:
   push:
@@ -33,14 +34,12 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.x'
-      - name: orchestrate
-        run: |
-          set -e
-          python3 -m unittest discover -s plugins/orchestrate/scripts -p 'test_*.py'
-          python3 -m unittest discover -s plugins/orchestrate/scripts/hooks -p 'test_*.py'
-          python3 plugins/orchestrate/scripts/ci_monitor/test_ci_monitor.py
-      - name: github-supplement
-        run: |
-          set -e
-          python3 -m unittest discover -s plugins/github-supplement/tests -p 'test_*.py'
-          for t in plugins/github-supplement/tests/test_*.sh; do bash "$t"; done
+      - name: Run the shell and Python tests
+        # Pinned to a commit on aunger/vcs-automation's main.
+        uses: aunger/vcs-automation/run-python-tests@7473f2326de1ee204e4121633ae86f6938a5f2a7
+        with:
+          paths: plugins
+      - name: CI Monitor tests
+        # test_ci_monitor.py is a script with its own runner, not unittest
+        # cases, so the action's discovery imports it and runs none of it.
+        run: python3 plugins/orchestrate/scripts/ci_monitor/test_ci_monitor.py
