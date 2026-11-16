@@ -39,11 +39,15 @@ For development, `claude --plugin-dir plugins` loads every plugin in a checkout 
 ## Testing
 
 From the repository root, as CI does.
-CI runs the tests through the `run-python-tests` action of [aunger/vcs-automation](https://github.com/aunger/vcs-automation), at the commit `.github/workflows/test.yml` pins; the third command expects a checkout of that repository beside this one.
+CI runs the tests through the `run-python-tests` action of [aunger/vcs-automation](https://github.com/aunger/vcs-automation), at the commit `.github/workflows/test.yml` pins.
+The four commands after the two validations put a checkout of that repository beside this one at that commit, cloning it the first time, and run the tests through it, so discovery and skips match CI's.
 
 ```bash
 for p in plugins/*/; do claude plugin validate "$p"; done
 claude plugin validate .
+sha=$(grep -o 'run-python-tests@[0-9a-f]\{40\}' .github/workflows/test.yml | cut -d@ -f2)
+[ -d ../vcs-automation ] || git clone -q https://github.com/aunger/vcs-automation ../vcs-automation
+git -C ../vcs-automation fetch -q origin "$sha" && git -C ../vcs-automation checkout -q "$sha"
 TEST_PATHS=plugins ../vcs-automation/run-python-tests/run_tests.sh
 python3 plugins/orchestrate/scripts/ci_monitor/test_ci_monitor.py
 ```

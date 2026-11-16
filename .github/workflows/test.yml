@@ -1,7 +1,8 @@
 name: Test
 
 # Validates the marketplace and every plugin manifest, and runs each plugin's
-# tests. Every command here is one the README's Testing section lists.
+# tests. The README's Testing section runs the same checks locally, with
+# vcs-automation's run_tests.sh at the commit the uses: line below pins.
 
 on:
   push:
