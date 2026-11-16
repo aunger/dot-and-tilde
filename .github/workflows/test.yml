@@ -35,8 +35,8 @@ jobs:
         with:
           python-version: '3.x'
       - name: Run the shell and Python tests
-        # Pinned to a commit on aunger/vcs-automation's main.
-        uses: aunger/vcs-automation/run-python-tests@7473f2326de1ee204e4121633ae86f6938a5f2a7
+        # Pinned to the commit of an aunger/vcs-automation release tag.
+        uses: aunger/vcs-automation/run-python-tests@d761b016d150f9d6e511afb04341a3f009a71a7e # v1.0.0
         with:
           paths: plugins
       - name: CI Monitor tests
