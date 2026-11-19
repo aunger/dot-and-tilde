@@ -121,10 +121,16 @@ Transitions are applied with github-supplement's `update_gh_labels.sh`, never wi
 
 The cycle never merges, and nothing in it opens a merge gate early: a project that wants its merges held while a cycle runs supplies the gate itself.
 [aunger/vcs-automation](https://github.com/aunger/vcs-automation)'s `check-blocking-labels` action is the gate this protocol pairs with.
-It fails, holding the merge through a required check named after its job, while any open pull request at the head commit carries `orchestrating`, `verification needed`, `changes requested` or `changes done`.
-Its README's section [The merge gate and orchestrate's labels](https://github.com/aunger/vcs-automation#the-merge-gate-and-orchestrates-labels) gives the wiring: the job that runs it, `enforce-mutually-exclusive-labels` before it in the same job, and the exclusive sets and excluded labels that keep the protocol's labels apart.
+It fails, holding the merge through a required check named after its job, while any open pull request at the head commit carries one of its `blocking-labels`, which for this protocol are `orchestrating`, `verification needed`, `changes requested` and `changes done`.
+Its README's section [The merge gate and orchestrate's labels](https://github.com/aunger/vcs-automation#the-merge-gate-and-orchestrates-labels) gives the wiring:
+
+- the job that runs it, with `enforce-mutually-exclusive-labels` before it in the same job;
+- the exclusive sets that keep the protocol's paired labels apart;
+- `propagate-issue-labels`' `excluded-labels`, which stops an issue's protocol labels being copied onto its pull request, since the two carry them separately;
+- and `wake-snoozed-issues`' `remove-on-wake`, which takes them off a woken issue so it does not resume mid-cycle.
+
 The project's `.claude/orchestrate.json` leaves the gate's check off `named_checks` and matches it with `ignored_check_regex`, since it is red for the whole cycle by design.
-gallery-button-for-pixel-camera's `administrative-merge-holds.yml` is one such job.
+In gallery-button-for-pixel-camera the gate is the `Administrative merge holds (not failure)` job of `administrative-merge-holds.yml`, which its `ignored_check_regex` matches.
 
 ## What the project supplies
 
