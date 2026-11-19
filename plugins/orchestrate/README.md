@@ -117,6 +117,21 @@ The protocol uses these labels, which the project must have:
 
 Transitions are applied with github-supplement's `update_gh_labels.sh`, never with a tool that replaces the whole label set.
 
+### The merge gate
+
+The cycle never merges, and nothing in it opens a merge gate early: a project that wants its merges held while a cycle runs supplies the gate itself.
+[aunger/vcs-automation](https://github.com/aunger/vcs-automation)'s `check-blocking-labels` action is the gate this protocol pairs with.
+It fails, holding the merge through a required check named after its job, while any open pull request at the head commit carries one of its `blocking-labels`, which for this protocol are `orchestrating`, `verification needed`, `changes requested` and `changes done`.
+Its README's section [The merge gate and orchestrate's labels](https://github.com/aunger/vcs-automation#the-merge-gate-and-orchestrates-labels) gives the wiring:
+
+- the job that runs it, with `enforce-mutually-exclusive-labels` before it in the same job;
+- the exclusive sets that keep the protocol's paired labels apart;
+- `propagate-issue-labels`' `excluded-labels`, which stops an issue's protocol labels being copied onto its pull request, since the two carry them separately;
+- and `wake-snoozed-issues`' `remove-on-wake`, which takes them off a woken issue so it does not resume mid-cycle.
+
+The project's `.claude/orchestrate.json` leaves the gate's check off `named_checks` and matches it with `ignored_check_regex`, since it is red for the whole cycle by design.
+In gallery-button-for-pixel-camera the gate is the `Administrative merge holds (not failure)` job of `administrative-merge-holds.yml`, which its `ignored_check_regex` matches.
+
 ## What the project supplies
 
 The agents load the project's `CLAUDE.md` or `AGENTS.md` like any sub-agent, and defer to it for everything that is the project's rather than the cycle's: how to build and test, how to write a PR description, how to write an issue or a comment, attribution footers, and dependency pinning.
