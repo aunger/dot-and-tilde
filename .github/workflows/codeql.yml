@@ -1,0 +1,49 @@
+name: CodeQL
+
+# Scans the Python scripts and tests and the GitHub Actions workflows for
+# security problems, and uploads the results to code scanning. CodeQL has no
+# shell extractor, so the shell scripts under plugins/github-supplement (its
+# hooks, bin helpers and tests) are not analyzed here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '20 1 * * 0'
+
+concurrency:
+  group: codeql-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+          - language: python
+            build-mode: none
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
