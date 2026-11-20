@@ -51,3 +51,8 @@ git -C ../vcs-automation fetch -q origin "$sha" && git -C ../vcs-automation chec
 TEST_PATHS=plugins ../vcs-automation/run-python-tests/run_tests.sh
 python3 plugins/orchestrate/scripts/ci_monitor/test_ci_monitor.py
 ```
+
+## Contributing
+
+Commits, pull requests and comments here carry no attribution, trailer or session link for an AI tool.
+For contributors who use Claude Code, `.claude/settings.json` turns all of Claude Code's own attribution off.
