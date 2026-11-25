@@ -36,6 +36,12 @@ A project there installs them from a script its `SessionStart` hook runs, then t
 
 For development, `claude --plugin-dir plugins` loads every plugin in a checkout for one session.
 
+In this repository, `.claude/settings.json` has a `SessionStart` hook that runs `.claude/install-plugins.sh` in cloud sessions.
+It installs every plugin in `.claude-plugin/marketplace.json` at local scope for this checkout, so all of them (their skills, agents and hooks) load in sessions whose working directory is this repository.
+They load from the checkout, so edits under `plugins/` apply at the next session start or `/reload-plugins`.
+The first run in a session installs them after Claude Code has started, so the user runs `/reload-skills` once.
+Run the script by hand to do the same on a local checkout.
+
 ## Testing
 
 From the repository root, as CI does.
