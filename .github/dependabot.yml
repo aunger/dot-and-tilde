@@ -1,9 +1,9 @@
 version: 2
 updates:
   # The action pins in .github/workflows. GitHub's own actions are pinned to
-  # major tags, and aunger/vcs-automation's run-python-tests to the commit of a
-  # release tag, with the tag in a comment beside it. This entry bumps both:
-  # the commit pin moves when vcs-automation tags a newer release.
+  # major tags, and aunger/vcs-automation's actions to the commit of a release
+  # tag, with the tag in a comment beside it. This entry bumps both: the
+  # commit pins move when vcs-automation tags a newer release.
   # One group, so a week's bumps arrive as one pull request.
   # The cooldown block keeps Dependabot's three-day delay for GitHub's actions
   # and lifts it for vcs-automation's, whose releases this repository's owner
