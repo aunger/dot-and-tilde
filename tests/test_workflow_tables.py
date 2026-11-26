@@ -8,7 +8,7 @@ labels of label-by-files.yml are not kept out of the other tables, when the
 orchestrate label protocol's labels are not where vcs-automation's README
 section "The merge gate and orchestrate's labels" puts them, when the
 vcs-automation pins differ, or when .claude/orchestrate.json does not match
-the merge gate and test.yml.
+the merge gate and the check names test.yml and codeql.yml produce.
 
 Standard library only: a table is read as the JSON of a `key: |` block scalar,
 the one form these workflows write their tables in, rather than by parsing the
@@ -74,6 +74,34 @@ def tables(name):
         except ValueError as error:
             raise AssertionError("%s: %s is not JSON: %s" % (name, key, error)) from error
     return found
+
+
+def check_names(text):
+    """The check names the jobs of workflow *text* report to GitHub.
+
+    A job reports its `name:` where one is set and its id otherwise. A name
+    that interpolates one `matrix.<key>` is expanded once per `- <key>: value`
+    entry of the job's `matrix: include:` list; any other expression in a name
+    is refused, since this reading cannot evaluate it.
+    """
+    jobs = text.split("\njobs:\n", 1)[1]
+    names = []
+    for match in re.finditer(r"^  ([\w-]+):\n((?:(?:    .*)?\n)*)", jobs + "\n", re.M):
+        job, body = match.groups()
+        named = re.search(r"^    name: (.+)$", body, re.M)
+        name = named.group(1).strip() if named else job
+        expression = re.fullmatch(r"(.*)\$\{\{ matrix\.([\w-]+) \}\}(.*)", name)
+        if expression:
+            before, key, after = expression.groups()
+            values = re.findall(r"^ +- %s: (\S+)$" % re.escape(key), body, re.M)
+        else:
+            before, after, values = name, "", [""]
+        if "${{" in before + after or not values:
+            raise AssertionError("cannot expand the check name %r of job %s" % (name, job))
+        names.extend(before + value + after for value in values)
+    if not names:
+        raise AssertionError("no jobs found")
+    return names
 
 
 def lowered(labels):
@@ -181,13 +209,45 @@ class OrchestrateConfigTest(unittest.TestCase):
         self.assertRegex(GATE_JOB_NAME, self.config["ignored_check_regex"])
         self.assertNotIn(GATE_JOB_NAME, self.config["named_checks"])
 
-    def test_named_checks_cover_every_test_job(self):
-        jobs = read("test.yml").split("\njobs:\n", 1)[1]
-        ids = re.findall(r"^  ([\w-]+):$", jobs, re.M)
-        self.assertTrue(ids)
-        for job in ids:
-            with self.subTest(job=job):
-                self.assertIn(job, self.config["named_checks"])
+    def test_named_checks_are_the_check_names_of_test_and_codeql(self):
+        produced = check_names(read("test.yml")) + check_names(read("codeql.yml"))
+        self.assertCountEqual(self.config["named_checks"], produced)
+
+
+class CheckNamesTest(unittest.TestCase):
+    def test_job_without_a_name_reports_its_id(self):
+        self.assertEqual(check_names("on: push\njobs:\n  build:\n    runs-on: x\n"), ["build"])
+
+    def test_name_overrides_the_id(self):
+        text = "on: push\njobs:\n  build:\n    name: Build it\n    runs-on: x\n"
+        self.assertEqual(check_names(text), ["Build it"])
+
+    def test_matrix_include_expands_the_name(self):
+        text = (
+            "on: push\n"
+            "jobs:\n"
+            "  analyze:\n"
+            "    name: Analyze (${{ matrix.language }})\n"
+            "    strategy:\n"
+            "      matrix:\n"
+            "        include:\n"
+            "          - language: actions\n"
+            "            build-mode: none\n"
+            "\n"
+            "          - language: python\n"
+            "    steps:\n"
+            "      - name: Checkout\n"
+            "  next:\n"
+            "    runs-on: x\n"
+        )
+        self.assertEqual(
+            check_names(text), ["Analyze (actions)", "Analyze (python)", "next"]
+        )
+
+    def test_an_unexpandable_name_is_refused(self):
+        text = "on: push\njobs:\n  build:\n    name: Build ${{ github.ref }}\n"
+        with self.assertRaises(AssertionError):
+            check_names(text)
 
 
 if __name__ == "__main__":

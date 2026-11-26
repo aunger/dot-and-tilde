@@ -1,7 +1,7 @@
 {
   "_comment": "Project configuration for the orchestrate plugin, which lives in this repository at plugins/orchestrate; its README documents every key. tests/test_workflow_tables.py checks this file with the plugin's scripts/check_config.py.",
   "repository": "aunger/dot-and-tilde",
-  "_comment_named_checks": "The CI checks the Orchestrator drives to green: every job of test.yml and codeql.yml, less the merge gate. A change that adds or removes one of those jobs updates this list in the same change.",
+  "_comment_named_checks": "The CI checks the Orchestrator drives to green: the check names the jobs of test.yml and codeql.yml report, a job's name: where it sets one (expanded per matrix entry) and its id otherwise. tests/test_workflow_tables.py fails when this list and those check names differ in either direction, so a change that adds, removes or renames one of those jobs updates this list in the same change.",
   "named_checks": [
     "validate",
     "tests",
