@@ -371,8 +371,28 @@ class TestHookState(unittest.TestCase):
             self.assertIsNone(self.expansion("disengage", name), name)
         self.assertEqual(hook_state.listed_sessions(self.state), [])
 
+    def test_no_arguments_report_status_and_usage_and_change_nothing(self):
+        for args in ("", "  ", None):
+            self.assertEqual(
+                self.context_of(self.expansion(args)),
+                "orch-hooks result: orchestrate hooks engaged for session s1."
+                " Usage: /orch-hooks disengage | engage | status",
+                args,
+            )
+        self.assertEqual(hook_state.listed_sessions(self.state), [])
+        hook_state.disengage("s1", self.state)
+        self.assertEqual(
+            self.context_of(self.expansion(None)),
+            "orch-hooks result: orchestrate hooks disengaged for session s1."
+            " Usage: /orch-hooks disengage | engage | status",
+        )
+        self.assertEqual(hook_state.listed_sessions(self.state), ["s1"])
+
+    def test_no_arguments_without_a_session_id_block(self):
+        self.assertEqual(self.expansion("", session_id="")["decision"], "block")
+
     def test_bad_arguments_block_the_expansion_and_change_nothing(self):
-        for args in ("", "off", "disengage now", None):
+        for args in ("off", "disengage now"):
             output = self.expansion(args)
             self.assertEqual(output["decision"], "block", args)
             self.assertIn("Usage: /orch-hooks disengage | engage | status", output["reason"])

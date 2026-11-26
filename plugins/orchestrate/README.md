@@ -49,7 +49,7 @@ Two hooks enforce this rather than ask for it:
   Those are the file and shell side of the Orchestrator's "may not" rules in executable form.
   The GitHub MCP tools are not checked, so not reading a PR's diff or comments stays a rule the Orchestrator keeps.
 
-To switch the hooks off for a session, a person runs `/orch-hooks disengage` (`/orch-hooks engage` restores them, `/orch-hooks status` reports).
+To switch the hooks off for a session, a person runs `/orch-hooks disengage` (`/orch-hooks engage` restores them, `/orch-hooks status` or a bare `/orch-hooks` reports).
 A `UserPromptExpansion` hook makes the change: Claude Code fires that event when a person types a command, never when the model invokes one, and the skill is user-invoked only besides.
 The hook records the session id in `.state/disengaged-sessions` under the plugin root; both enforcing hooks read that file first and exit before doing anything for a listed session.
 The file is not under `${CLAUDE_PLUGIN_DATA}` because the Orchestrator guard is a skill hook, and Claude Code gives a skill hook only `${CLAUDE_PLUGIN_ROOT}`; under a marketplace install an update moves the root and drops the state, which re-engages the hooks, while a plugin loaded from a fixed directory keeps it.
