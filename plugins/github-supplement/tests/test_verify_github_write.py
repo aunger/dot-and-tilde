@@ -139,6 +139,25 @@ class TestLocate(unittest.TestCase):
                 None,
             )
 
+    def test_comment_update_uses_the_id_from_the_input(self):
+        # update_issue_comment's schema requires comment_id and has no
+        # issue_number, so the description must not print "None".
+        target = vgw.locate(
+            "mcp__github__update_issue_comment",
+            {"owner": "o", "repo": "r", "comment_id": 555, "body": "b"},
+            None,
+        )
+        self.assertEqual(target.api_url, "https://api.github.com/repos/o/r/issues/comments/555")
+        self.assertEqual(target.description, "comment 555 on o/r")
+
+    def test_comment_update_with_no_comment_id_is_unverifiable(self):
+        with self.assertRaises(vgw.Unverifiable):
+            vgw.locate(
+                "mcp__github__update_issue_comment",
+                {"owner": "o", "repo": "r", "body": "b"},
+                {"id": 555},
+            )
+
     def test_create_pull_request(self):
         target = vgw.locate(
             "mcp__github__create_pull_request",
