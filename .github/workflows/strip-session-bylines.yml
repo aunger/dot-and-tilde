@@ -1,0 +1,53 @@
+name: Strip Claude session-URL bylines
+
+# Removes Claude session-URL bylines (https://claude.ai/code/session_...) from
+# issues, pull requests, comments and reviews as they are written, through
+# vcs-automation's strip-session-bylines action. Run by hand with a number,
+# it cleans that whole issue or pull request instead: its description and
+# every comment and review.
+#
+# The other half of the same policy is the `attribution` block of
+# .claude/settings.json, which tells Claude Code to add no attribution or
+# session link to the commits and pull requests it writes here. That reaches
+# only contributors who use Claude Code in a checkout of this repository; this
+# workflow catches what still gets through.
+#
+# The actor guard keeps the action's own edits from running it again; an edit
+# made with GITHUB_TOKEN starts no run anyway.
+#
+# No checkout: the action runs its own copy of the script, at the commit the
+# `uses:` line pins. On pull request and review events this file itself
+# comes from the pull request's merge ref, so that is no boundary there.
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+  pull_request:
+    types: [opened, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited]
+  workflow_dispatch:
+    inputs:
+      number:
+        description: Issue or pull request number
+        required: true
+        type: number
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  strip-bylines:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - name: Strip session-URL bylines
+        uses: aunger/vcs-automation/strip-session-bylines@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0
+        with:
+          # Empty except on a workflow_dispatch run.
+          number: ${{ inputs.number }}

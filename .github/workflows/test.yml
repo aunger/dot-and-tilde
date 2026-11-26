@@ -1,8 +1,9 @@
 name: Test
 
-# Validates the marketplace and every plugin manifest, and runs each plugin's
-# tests. The README's Testing section runs the same checks locally, with
-# vcs-automation's run_tests.sh at the commit the uses: line below pins.
+# Validates the marketplace and every plugin manifest, runs each plugin's
+# tests and the repository's own, and checks the workflows' checkouts. The
+# README's Testing section runs the validations and the tests locally, with
+# vcs-automation's run_tests.sh at the commit the uses: lines below pin.
 
 on:
   push:
@@ -38,8 +39,22 @@ jobs:
         # Pinned to the commit of an aunger/vcs-automation release tag.
         uses: aunger/vcs-automation/run-python-tests@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0
         with:
-          paths: plugins
+          paths: |
+            plugins
+            tests
       - name: CI Monitor tests
         # test_ci_monitor.py is a script with its own runner, not unittest
         # cases, so the action's discovery imports it and runs none of it.
         run: python3 plugins/orchestrate/scripts/ci_monitor/test_ci_monitor.py
+
+  privileged-checkout-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+      - name: Check the workflows' checkouts
+        # Fails when a job a pull request can trigger, holding a write scope,
+        # checks out pull request code.
+        uses: aunger/vcs-automation/privileged-checkout-guard@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0

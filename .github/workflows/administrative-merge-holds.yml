@@ -1,0 +1,81 @@
+name: Administrative merge holds
+
+# The merge gate of the orchestrate plugin's label protocol, wired as
+# aunger/vcs-automation's README section "The merge gate and orchestrate's
+# labels" describes. One job, two steps, in this order:
+#
+#   1. enforce-mutually-exclusive-labels, on `labeled` events of issues and
+#      pull requests: when a label of an exclusive set or prefix group is
+#      added, it removes the others of that set or group.
+#   2. check-blocking-labels, on pull request events: fails the job while any
+#      open pull request whose head is this commit carries a blocking label.
+#
+# The job's name is the required status check that holds the merge, and
+# .claude/orchestrate.json's ignored_check_regex matches it, since it is red
+# for the whole of every cycle by design.
+#
+# Enforcement runs first because it can remove a blocking label (adding
+# `orchestrate` removes `orchestrating`), and a removal made with GITHUB_TOKEN
+# starts no new run, so step 2 drops the labels step 1 removed from the event
+# payload's, which predate the removal. A red step 2 is a deliberate hold; a
+# red step 1 is a broken enforcement run, which holds the merge too. On a fork
+# pull request GITHUB_TOKEN is read-only, so a removal there fails.
+#
+# `verification needed`/`verified` and `changes requested`/`changes done` are
+# separate sets: they track different things (the before-merging items, and
+# the Author and Reviewer round), and one set would let `verified` remove
+# `changes requested` and open the gate. The snooze ladder is a set too, so an
+# issue carries at most one rung, and the `test-failure` prefix keeps
+# `test-failure` and `test-failure-archive` apart.
+#
+# The tables are shared: propagate-issue-labels.yml and
+# reconcile-issue-labels.yml take the same sets and prefixes, and
+# snooze-issues.yml and wake-snoozed-issues.yml the same ladder.
+# tests/test_workflow_tables.py fails when the copies differ.
+#
+# `closed` is a trigger because closing a pull request can be what unblocks a
+# sibling at the same commit; the docstring of the action's
+# check_blocking_labels.py has the rest. The `issues` trigger serves step 1
+# only.
+#
+# No checkout: each action runs its own copy of its script, at the commit the
+# `uses:` line pins.
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled, closed]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  administrative-merge-holds:
+    name: Administrative merge holds (not failure)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce mutually exclusive label sets
+        id: enforce
+        if: github.event.action == 'labeled'
+        uses: aunger/vcs-automation/enforce-mutually-exclusive-labels@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0
+        with:
+          exclusive-sets: |
+            [
+              ["verification needed", "verified"],
+              ["changes requested", "changes done"],
+              ["orchestrate", "orchestrating"],
+              ["snooze 3 days", "snooze 7 days", "snooze 14 days", "snooze 30 days", "snooze 90 days", "snooze 180 days"]
+            ]
+          exclusive-prefixes: |
+            ["c-a-", "c-r-", "test-failure"]
+
+      - name: Red to hold merge, not a failure
+        if: github.event_name == 'pull_request'
+        uses: aunger/vcs-automation/check-blocking-labels@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0
+        with:
+          blocking-labels: |
+            ["orchestrating", "verification needed", "changes requested", "changes done"]
+          # Empty when step 1 was skipped or removed nothing.
+          removed-labels: ${{ steps.enforce.outputs.removed }}

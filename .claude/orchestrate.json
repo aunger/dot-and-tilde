@@ -1,0 +1,14 @@
+{
+  "_comment": "Project configuration for the orchestrate plugin, which lives in this repository at plugins/orchestrate; its README documents every key. tests/test_workflow_tables.py checks this file with the plugin's scripts/check_config.py.",
+  "repository": "aunger/dot-and-tilde",
+  "_comment_named_checks": "The CI checks the Orchestrator drives to green: every job of test.yml and codeql.yml, less the merge gate. A change that adds or removes one of those jobs updates this list in the same change.",
+  "named_checks": [
+    "validate",
+    "tests",
+    "privileged-checkout-guard",
+    "Analyze (actions)",
+    "Analyze (python)"
+  ],
+  "_comment_ignored": "Administrative merge holds (not failure) is the merge gate of administrative-merge-holds.yml: it is red for the whole of every cycle by design, so it is left off named_checks and out of the Monitor's verdict (the parentheses are escaped because the value is a regex).",
+  "ignored_check_regex": "^Administrative merge holds \\(not failure\\)$"
+}

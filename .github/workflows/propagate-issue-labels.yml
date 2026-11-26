@@ -1,0 +1,62 @@
+name: Propagate issue labels to linked PR
+
+# Copies the labels of the issues a pull request closes ("Fixes #N" and the
+# other closing keywords, or a link made from the Development sidebar) onto
+# the pull request, through vcs-automation's propagate-issue-labels action. A
+# label that would displace a mutually exclusive label the pull request
+# already carries is skipped; the action's action.yml gives the exact rules.
+#
+# `excluded-labels` are never copied: the orchestrate protocol's six labels,
+# which an issue and its pull request carry separately, and the four
+# "plugin: ..." labels, which label-by-files.yml decides from the changed
+# files. `exclusive-sets` and `exclusive-prefixes` are
+# administrative-merge-holds.yml's. reconcile-issue-labels.yml takes the same
+# three tables; tests/test_workflow_tables.py fails when any copy differs.
+#
+# GitHub sends no event for a link made from the Development sidebar, so this
+# also runs when a pull request is reopened or its body is edited, and
+# reconcile-issue-labels.yml covers one that sees neither. `labeled` and
+# `unlabeled` are left out: a run on `unlabeled` would re-add a label a person
+# just removed. An `edited` event runs it only when the body changed.
+#
+# No checkout: the action runs its own copy of the script, at the commit the
+# `uses:` line pins.
+
+on:
+  pull_request:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  propagate-issue-labels:
+    runs-on: ubuntu-latest
+    if: github.event.action != 'edited' || github.event.changes.body
+    steps:
+      - name: Propagate linked issue labels
+        uses: aunger/vcs-automation/propagate-issue-labels@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0
+        with:
+          excluded-labels: |
+            [
+              "orchestrate",
+              "orchestrating",
+              "verification needed",
+              "verified",
+              "changes requested",
+              "changes done",
+              "plugin: orchestrate",
+              "plugin: github-supplement",
+              "plugin: bag-o-agents",
+              "plugin: agent-citizenship"
+            ]
+          exclusive-sets: |
+            [
+              ["verification needed", "verified"],
+              ["changes requested", "changes done"],
+              ["orchestrate", "orchestrating"],
+              ["snooze 3 days", "snooze 7 days", "snooze 14 days", "snooze 30 days", "snooze 90 days", "snooze 180 days"]
+            ]
+          exclusive-prefixes: |
+            ["c-a-", "c-r-", "test-failure"]

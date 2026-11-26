@@ -1,0 +1,43 @@
+name: Snooze issues
+
+# When a snooze label is added to an open issue, closes it as not planned,
+# through vcs-automation's snooze-issues action, so it stops reading as open
+# work. wake-snoozed-issues.yml reopens it once the label's days have passed.
+#
+# The `snooze-labels` input is the snooze ladder, each label mapped to its
+# days. wake-snoozed-issues.yml takes the same table, and its labels are one
+# of administrative-merge-holds.yml's exclusive sets, so an issue carries at
+# most one rung; tests/test_workflow_tables.py checks both.
+# Renaming a rung strands every snooze running under it, since the wake dates
+# a snooze from the rung's `labeled` event; read the docstring of the action's
+# wake_snoozed_issues.py first.
+#
+# Issues only: closing a pull request abandons work, which is not what a
+# snooze means.
+#
+# No checkout: the action runs its own copy of the script, at the commit the
+# `uses:` line pins.
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+jobs:
+  snooze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Snooze the issue
+        uses: aunger/vcs-automation/snooze-issues@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0
+        with:
+          snooze-labels: |
+            {
+              "snooze 3 days": 3,
+              "snooze 7 days": 7,
+              "snooze 14 days": 14,
+              "snooze 30 days": 30,
+              "snooze 90 days": 90,
+              "snooze 180 days": 180
+            }

@@ -1,0 +1,51 @@
+name: Label PR by changed files
+
+# Applies labels to a pull request by the files it changes, through
+# vcs-automation's label-by-files action. The `rules` input below is the
+# table; the action's action.yml gives the format.
+#
+# "automated tests", "ci" and "documentation" are every-file rules: applied
+# when every changed file matches the label's globs, and never removed. The
+# four "plugin: ..." labels are any-file rules: applied when any changed file
+# is under that plugin's directory, and removed when none is. That is why
+# label-by-title.yml skips them on pull requests and propagate-issue-labels.yml
+# and reconcile-issue-labels.yml never copy them;
+# tests/test_workflow_tables.py checks that the tables agree.
+#
+# A separate workflow from label-by-title.yml because the two want different
+# triggers: this runs on every push to a pull request, and has nothing to do
+# on a title edit or an issue event.
+#
+# To check a rule change against merged pull requests, or to backfill one, run
+# label-by-files/audit_labels_by_files.py from a checkout of
+# aunger/vcs-automation with its requirements.txt installed, with `-n` to
+# report and `-f` to change, and `--workflow` pointing at this file.
+#
+# No checkout: the action runs its own copy of the script, at the commit the
+# `uses:` line pins.
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  label-by-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply labels matching the changed files
+        uses: aunger/vcs-automation/label-by-files@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0
+        with:
+          rules: |
+            {
+              "automated tests": {"mode": "every-file", "paths": ["**/test_?*.py", "**/test_?*.sh"]},
+              "ci": {"mode": "every-file", "paths": [".github/**"]},
+              "documentation": {"mode": "every-file", "paths": ["**/README.md"]},
+              "plugin: orchestrate": {"mode": "any-file", "paths": ["plugins/orchestrate/**"]},
+              "plugin: github-supplement": {"mode": "any-file", "paths": ["plugins/github-supplement/**"]},
+              "plugin: bag-o-agents": {"mode": "any-file", "paths": ["plugins/bag-o-agents/**"]},
+              "plugin: agent-citizenship": {"mode": "any-file", "paths": ["plugins/agent-citizenship/**"]}
+            }

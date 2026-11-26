@@ -1,0 +1,90 @@
+name: Label issue/PR by title
+
+# Applies labels to an issue or pull request whose title matches each label's
+# regular expressions, through vcs-automation's label-by-title action. The
+# `rules` input below is the table: each label maps to regexes that count as
+# alternatives, matched case-insensitively; the action's action.yml gives the
+# format. Labels are only added, never removed.
+#
+# `skip-on-pull-requests` keeps the four "plugin: ..." labels off pull
+# requests: label-by-files.yml decides them there from the changed files, so
+# the two never race for the same label. tests/test_workflow_tables.py checks
+# that the two tables, and propagate-issue-labels.yml's `excluded-labels`,
+# agree on them.
+#
+# Runs on "opened", or on "edited" when the title itself changed
+# (github.event.changes.title is present only then), so a body or base-branch
+# edit does not re-run it.
+#
+# To apply a rule change to existing issues and pull requests, run
+# label-by-title/backfill_labels_by_title.py from a checkout of
+# aunger/vcs-automation with its requirements.txt installed, with `-n` to
+# report and `-f` to add, and `--workflow` pointing at this file.
+#
+# No checkout: the action runs its own copy of the script, at the commit the
+# `uses:` line pins.
+
+on:
+  issues:
+    types: [opened, edited]
+  pull_request:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  label-by-title:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened' || github.event.changes.title
+    steps:
+      - name: Apply labels matching the title
+        uses: aunger/vcs-automation/label-by-title@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0
+        with:
+          rules: |
+            {
+              "automated tests": [
+                "(?<![\\w-])test\\w*",
+                "(\\b|_)unittest\\w*"
+              ],
+              "ci": [
+                "(\\b|_)ci(\\b|_)",
+                "(\\b|_)workflows?(\\b|_)",
+                "(\\b|_)github[\\W_]*actions?(\\b|_)",
+                "(\\b|_)codeql(\\b|_)",
+                "(\\b|_)dependabot(\\b|_)",
+                "(\\b|_)vcs-automation(\\b|_)"
+              ],
+              "documentation": [
+                "(\\b|_)readme(\\b|_)",
+                "(\\b|_)document\\w*",
+                "(\\b|_)docs?(\\b|_)"
+              ],
+              "plugin: orchestrate": [
+                "(\\b|_)orch(estrat\\w*|-hooks)",
+                "(\\b|_)ci[\\W_]*monitor\\w*",
+                "(\\b|_)dispatch[\\W_]*form\\w*"
+              ],
+              "plugin: github-supplement": [
+                "(\\b|_)github-supplement(\\b|_)",
+                "(\\b|_)read-?back(\\b|_)",
+                "(\\b|_)scratchpad\\w*"
+              ],
+              "plugin: bag-o-agents": [
+                "(\\b|_)bag-o-agents(\\b|_)",
+                "(\\b|_)deep-planner(\\b|_)"
+              ],
+              "plugin: agent-citizenship": [
+                "(\\b|_)agent-citizenship(\\b|_)",
+                "(\\b|_)pr-creation(\\b|_)",
+                "(\\b|_)code-edit(\\b|_)"
+              ]
+            }
+          skip-on-pull-requests: |
+            [
+              "plugin: orchestrate",
+              "plugin: github-supplement",
+              "plugin: bag-o-agents",
+              "plugin: agent-citizenship"
+            ]

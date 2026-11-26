@@ -1,0 +1,53 @@
+name: Wake snoozed issues
+
+# Daily, through vcs-automation's wake-snoozed-issues action: reopens each
+# issue whose snooze label's days have passed, removes that label and the
+# `remove-on-wake` labels, and comments that the snooze has run out. The
+# label decides, not the issue's state: a closed issue is reopened whatever
+# its close reason, and one reopened by hand is stripped and commented on, even
+# mid-cycle. Remove the snooze label from an issue that should not wake.
+#
+# `snooze-labels` is snooze-issues.yml's table. `remove-on-wake` is the
+# orchestrate protocol's six labels, so a woken issue lands back in triage
+# rather than resuming mid-cycle; propagate-issue-labels.yml never copies them
+# either. tests/test_workflow_tables.py checks both pairings.
+#
+# Offset from archive-stale-test-failures.yml's cron, so the two daily
+# issue-label jobs do not start at the same minute.
+#
+# No checkout: the action runs its own copy of the script, at the commit the
+# `uses:` line pins.
+
+on:
+  schedule:
+    - cron: '7 5 * * *'   # daily at 05:07 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake issues past their snooze
+        uses: aunger/vcs-automation/wake-snoozed-issues@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0
+        with:
+          snooze-labels: |
+            {
+              "snooze 3 days": 3,
+              "snooze 7 days": 7,
+              "snooze 14 days": 14,
+              "snooze 30 days": 30,
+              "snooze 90 days": 90,
+              "snooze 180 days": 180
+            }
+          remove-on-wake: |
+            [
+              "orchestrate",
+              "orchestrating",
+              "verification needed",
+              "verified",
+              "changes requested",
+              "changes done"
+            ]

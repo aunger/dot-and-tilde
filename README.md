@@ -54,9 +54,22 @@ claude plugin validate .
 sha=$(grep -o 'run-python-tests@[0-9a-f]\{40\}' .github/workflows/test.yml | cut -d@ -f2)
 [ -d ../vcs-automation ] || git clone -q https://github.com/aunger/vcs-automation ../vcs-automation
 git -C ../vcs-automation fetch -q origin "$sha" && git -C ../vcs-automation checkout -q "$sha"
-TEST_PATHS=plugins ../vcs-automation/run-python-tests/run_tests.sh
+TEST_PATHS=$'plugins\ntests' ../vcs-automation/run-python-tests/run_tests.sh
 python3 plugins/orchestrate/scripts/ci_monitor/test_ci_monitor.py
 ```
+
+## Repository automation
+
+The workflows in `.github/workflows` call [aunger/vcs-automation](https://github.com/aunger/vcs-automation)'s actions, each pinned to the commit of one release tag, with the tag in a comment, so Dependabot's `github-actions` entry bumps them together.
+Besides running the tests, they check that no job a pull request can trigger checks out its code with a write token, strip session bylines, label issues and pull requests by title and changed files, copy an issue's labels onto the pull request that closes it, snooze and wake issues, archive stale `test-failure` issues, and report branches to clean up.
+
+The orchestrate plugin's label protocol runs here, and `administrative-merge-holds.yml` is its merge gate: its job, `Administrative merge holds (not failure)`, fails while an open pull request at the head commit carries a blocking label.
+`.claude/orchestrate.json` is the plugin's configuration for this repository.
+
+Several of the label actions read the same table, and each workflow passes its own copy.
+`tests/test_workflow_tables.py` fails when two copies differ, and when `.claude/orchestrate.json` stops matching the merge gate and `test.yml`.
+
+`dependency-audit` and `install-pinned-requirements` are not used: the plugins' scripts and tests import only the standard library, so there is no Python lock to audit or install.
 
 ## Contributing
 
