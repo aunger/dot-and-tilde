@@ -12,7 +12,8 @@ the merge gate and test.yml.
 
 Standard library only: a table is read as the JSON of a `key: |` block scalar,
 the one form these workflows write their tables in, rather than by parsing the
-YAML.
+YAML. Only the block of the key a test asks for is parsed, so other block
+scalars, such as `run: |` steps, need not be JSON.
 """
 
 import json
@@ -49,10 +50,19 @@ def read(name):
         return handle.read()
 
 
-def tables(name):
-    """Map each `key: |` block scalar in workflow *name* to its value parsed as JSON."""
-    lines = read(name).splitlines()
-    found = {}
+def table(name, key):
+    """Parse the `key: |` block scalar in workflow *name* as JSON."""
+    return parse_table(read(name), name, key)
+
+
+def parse_table(text, name, key):
+    """Parse the `key: |` block scalar in *text*, the workflow *name*, as JSON.
+
+    Only *key*'s block is parsed; a block scalar under any other key, such as
+    a `run: |` step, is skipped over.
+    """
+    lines = text.splitlines()
+    bodies = []
     i = 0
     while i < len(lines):
         match = re.fullmatch(r"( *)([\w-]+): \|", lines[i])
@@ -66,14 +76,16 @@ def tables(name):
         ):
             body.append(lines[i])
             i += 1
-        key = match.group(2)
-        if key in found:
-            raise AssertionError("%s passes %s twice" % (name, key))
-        try:
-            found[key] = json.loads("\n".join(body))
-        except ValueError as error:
-            raise AssertionError("%s: %s is not JSON: %s" % (name, key, error)) from error
-    return found
+        if match.group(2) == key:
+            bodies.append(body)
+    if not bodies:
+        raise AssertionError("%s passes no %s block" % (name, key))
+    if len(bodies) > 1:
+        raise AssertionError("%s passes %s twice" % (name, key))
+    try:
+        return json.loads("\n".join(bodies[0]))
+    except ValueError as error:
+        raise AssertionError("%s: %s is not JSON: %s" % (name, key, error)) from error
 
 
 def lowered(labels):
@@ -84,65 +96,104 @@ def label_sets(sets):
     return sorted(sorted(lowered(s)) for s in sets)
 
 
+class ParseTableTest(unittest.TestCase):
+    TEXT = """\
+steps:
+  - run: |
+      set -e
+      echo not JSON
+  - with:
+      wanted: |
+        {"a": [1, 2]}
+      other: |
+        also not JSON
+"""
+
+    def test_reads_only_the_key_asked_for(self):
+        self.assertEqual(parse_table(self.TEXT, "w.yml", "wanted"), {"a": [1, 2]})
+
+    def test_names_the_key_that_is_not_json(self):
+        with self.assertRaisesRegex(AssertionError, r"\Aw\.yml: other is not JSON"):
+            parse_table(self.TEXT, "w.yml", "other")
+
+    def test_a_missing_key_fails(self):
+        with self.assertRaisesRegex(AssertionError, r"\Aw\.yml passes no missing block\Z"):
+            parse_table(self.TEXT, "w.yml", "missing")
+
+    def test_a_repeated_key_fails(self):
+        text = self.TEXT + "  - with:\n      wanted: |\n        []\n"
+        with self.assertRaisesRegex(AssertionError, r"\Aw\.yml passes wanted twice\Z"):
+            parse_table(text, "w.yml", "wanted")
+
+    def test_a_key_inside_another_block_is_not_read(self):
+        text = "run: |\n  wanted: |\n    oops\n"
+        with self.assertRaisesRegex(AssertionError, r"passes no wanted block"):
+            parse_table(text, "w.yml", "wanted")
+
+    def test_a_key_is_not_matched_as_a_suffix(self):
+        text = "with:\n  not-wanted: |\n    oops\n"
+        with self.assertRaisesRegex(AssertionError, r"passes no wanted block"):
+            parse_table(text, "w.yml", "wanted")
+
+
 class SharedTablesTest(unittest.TestCase):
     def test_exclusive_tables_are_the_merge_gates(self):
-        gate = tables("administrative-merge-holds.yml")
+        gate = "administrative-merge-holds.yml"
         for name in ("propagate-issue-labels.yml", "reconcile-issue-labels.yml"):
-            other = tables(name)
             with self.subTest(workflow=name):
                 self.assertEqual(
-                    label_sets(other["exclusive-sets"]), label_sets(gate["exclusive-sets"])
+                    label_sets(table(name, "exclusive-sets")),
+                    label_sets(table(gate, "exclusive-sets")),
                 )
                 self.assertEqual(
-                    lowered(other["exclusive-prefixes"]), lowered(gate["exclusive-prefixes"])
+                    lowered(table(name, "exclusive-prefixes")),
+                    lowered(table(gate, "exclusive-prefixes")),
                 )
 
     def test_excluded_labels_agree(self):
         self.assertEqual(
-            lowered(tables("propagate-issue-labels.yml")["excluded-labels"]),
-            lowered(tables("reconcile-issue-labels.yml")["excluded-labels"]),
+            lowered(table("propagate-issue-labels.yml", "excluded-labels")),
+            lowered(table("reconcile-issue-labels.yml", "excluded-labels")),
         )
 
     def test_snooze_ladder_is_shared_and_exclusive(self):
-        snooze = tables("snooze-issues.yml")["snooze-labels"]
-        wake = tables("wake-snoozed-issues.yml")["snooze-labels"]
+        snooze = table("snooze-issues.yml", "snooze-labels")
+        wake = table("wake-snoozed-issues.yml", "snooze-labels")
         self.assertEqual(
             {k.lower(): v for k, v in snooze.items()}, {k.lower(): v for k, v in wake.items()}
         )
-        gate_sets = label_sets(tables("administrative-merge-holds.yml")["exclusive-sets"])
+        gate_sets = label_sets(table("administrative-merge-holds.yml", "exclusive-sets"))
         self.assertIn(sorted(lowered(snooze)), gate_sets)
 
     def test_any_file_labels_are_kept_out_of_the_other_tables(self):
-        rules = tables("label-by-files.yml")["rules"]
+        rules = table("label-by-files.yml", "rules")
         any_file = lowered(label for label, rule in rules.items() if rule["mode"] == "any-file")
         self.assertTrue(any_file)
-        self.assertEqual(
-            lowered(tables("label-by-title.yml")["skip-on-pull-requests"]), any_file
-        )
-        excluded = lowered(tables("propagate-issue-labels.yml")["excluded-labels"])
+        self.assertEqual(lowered(table("label-by-title.yml", "skip-on-pull-requests")), any_file)
+        excluded = lowered(table("propagate-issue-labels.yml", "excluded-labels"))
         self.assertLessEqual(any_file, excluded)
 
 
 class ProtocolLabelsTest(unittest.TestCase):
     def test_gate_blocks_on_the_protocols_labels(self):
-        gate = tables("administrative-merge-holds.yml")
-        self.assertEqual(lowered(gate["blocking-labels"]), BLOCKING_LABELS)
+        gate = table("administrative-merge-holds.yml", "blocking-labels")
+        self.assertEqual(lowered(gate), BLOCKING_LABELS)
 
     def test_protocol_pairs_are_separate_sets(self):
-        gate_sets = label_sets(tables("administrative-merge-holds.yml")["exclusive-sets"])
+        gate_sets = label_sets(table("administrative-merge-holds.yml", "exclusive-sets"))
         for pair in PROTOCOL_SETS:
             with self.subTest(pair=sorted(pair)):
                 self.assertIn(sorted(pair), gate_sets)
-        prefixes = lowered(tables("administrative-merge-holds.yml")["exclusive-prefixes"])
+        prefixes = lowered(table("administrative-merge-holds.yml", "exclusive-prefixes"))
         self.assertLessEqual(PROTOCOL_PREFIXES, prefixes)
 
     def test_protocol_labels_are_never_propagated(self):
-        excluded = lowered(tables("propagate-issue-labels.yml")["excluded-labels"])
+        excluded = lowered(table("propagate-issue-labels.yml", "excluded-labels"))
         self.assertLessEqual(PROTOCOL_LABELS, excluded)
 
     def test_waking_removes_the_protocol_labels(self):
         self.assertEqual(
-            lowered(tables("wake-snoozed-issues.yml")["remove-on-wake"]), PROTOCOL_LABELS
+            lowered(table("wake-snoozed-issues.yml", "remove-on-wake")), PROTOCOL_LABELS
         )
 
 
