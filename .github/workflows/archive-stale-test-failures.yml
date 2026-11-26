@@ -1,0 +1,26 @@
+name: Archive stale test-failure issues
+
+# Daily, through vcs-automation's archive-stale-test-failures action: swaps
+# the `test-failure` label for `test-failure-archive` on issues, open or
+# closed, with no activity for the action's default of 21 days, so they drop
+# out of the search a test-failure reporter uses to find an existing issue.
+# Nothing in this repository files `test-failure` issues yet; this keeps the
+# label's lifecycle in place for whatever starts to.
+#
+# No checkout: the action runs its own copy of the script, at the commit the
+# `uses:` line pins.
+
+on:
+  schedule:
+    - cron: '37 4 * * *'   # daily at 04:37 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Archive stale test-failure issues
+        uses: aunger/vcs-automation/archive-stale-test-failures@2f12f1a9c1f064e1a69c4b098776041946092712 # v1.3.0
