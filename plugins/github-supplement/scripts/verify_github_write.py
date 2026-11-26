@@ -288,6 +288,22 @@ def _locate_issue_comment(tool_input: dict, response: dict) -> Target:
     )
 
 
+def _locate_issue_comment_update(tool_input: dict, response: dict) -> Target:
+    """Locate an edited issue or pull request conversation comment.
+
+    The edited comment already exists, so its id is in the input: the tool's
+    schema requires `comment_id` and carries no `issue_number`, which is why
+    the description names only the repository.
+    """
+    del response
+    repo = _repo(tool_input)
+    comment_id = _require(tool_input.get("comment_id"), "comment id")
+    return Target(
+        f"{API_ROOT}/repos/{repo}/issues/comments/{comment_id}",
+        f"comment {comment_id} on {repo}",
+    )
+
+
 def _locate_create_pull_request(tool_input: dict, response: dict) -> Target:
     repo = _repo(tool_input)
     number = _require(_number_from_response(response), "pull request number")
@@ -387,6 +403,7 @@ def _locate_pending_review_comment(tool_input: dict, response: dict) -> Target:
 LOCATORS = {
     "issue_write": _locate_issue_write,
     "add_issue_comment": _locate_issue_comment,
+    "update_issue_comment": _locate_issue_comment_update,
     "create_pull_request": _locate_create_pull_request,
     "update_pull_request": _locate_update_pull_request,
     "pull_request_review_write": _locate_review_write,
