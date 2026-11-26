@@ -65,7 +65,9 @@ def parse_table(text, name, key):
     bodies = []
     i = 0
     while i < len(lines):
-        match = re.fullmatch(r"( *)([\w-]+): \|", lines[i])
+        # A key may start a sequence entry (`- run: |`); its block is then
+        # indented past the key's column, which the `- ` counts toward.
+        match = re.fullmatch(r"( *(?:- +)*)([\w-]+): \|", lines[i])
         i += 1
         if not match:
             continue
@@ -100,8 +102,10 @@ class ParseTableTest(unittest.TestCase):
     TEXT = """\
 steps:
   - run: |
-      set -e
-      echo not JSON
+      cat <<EOF
+      wanted: |
+        not JSON
+      EOF
   - with:
       wanted: |
         {"a": [1, 2]}
@@ -127,12 +131,12 @@ steps:
 
     def test_a_key_inside_another_block_is_not_read(self):
         text = "run: |\n  wanted: |\n    oops\n"
-        with self.assertRaisesRegex(AssertionError, r"passes no wanted block"):
+        with self.assertRaisesRegex(AssertionError, r"\Aw\.yml passes no wanted block\Z"):
             parse_table(text, "w.yml", "wanted")
 
     def test_a_key_is_not_matched_as_a_suffix(self):
         text = "with:\n  not-wanted: |\n    oops\n"
-        with self.assertRaisesRegex(AssertionError, r"passes no wanted block"):
+        with self.assertRaisesRegex(AssertionError, r"\Aw\.yml passes no wanted block\Z"):
             parse_table(text, "w.yml", "wanted")
 
 
