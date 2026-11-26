@@ -16,7 +16,7 @@ That split is what lets the plugin move to other projects, or out of this one, w
 | `reference/`                   | Documents the skill and the agents read on demand, so no agent's context carries a phase it is not in.                                                                                           |
 | `hooks/hooks.json`             | The plugin's hooks: the dispatch-form check on every Agent call, the `/orch-hooks` handler, and the check that keeps tool calls away from the hook state.                                        |
 | `scripts/hooks/`               | The hook scripts: `check_dispatch.py`, `orchestrator_guard.py` (registered by the Orchestrator skill for the session that runs it), `hook_state.py`, `protect_state.py`, and the form validator. |
-| `skills/orch-hooks/SKILL.md`   | `/orch-hooks disengage` and `/orch-hooks engage`: switch both hooks off, or back on, for the current session. User-invoked only.                                                                 |
+| `skills/orch-hooks/SKILL.md`   | `/orch-hooks disengage` and `/orch-hooks engage`: switch both hooks off, or back on, for the rest of the current session, a later `/orchestrate` included. User-invoked only.                    |
 | `scripts/ci_monitor/`          | The CI Monitor, with its README and tests.                                                                                                                                                       |
 | `scripts/dispatch_cost.py`     | Reports a cycle's token spend from the session transcripts, while they exist.                                                                                                                    |
 | `scripts/check_config.py`      | Validates a project configuration file; it runs as a single file, so a project's CI can fetch it alone (see "Project configuration").                                                            |
@@ -50,6 +50,7 @@ Two hooks enforce this rather than ask for it:
   The GitHub MCP tools are not checked, so not reading a PR's diff or comments stays a rule the Orchestrator keeps.
 
 To switch the hooks off for a session, a person runs `/orch-hooks disengage` (`/orch-hooks engage` restores them, `/orch-hooks status` or a bare `/orch-hooks` reports).
+The setting lasts until the session ends or `/orch-hooks` changes it; a later `/orchestrate` in the same session does not reset it.
 A `UserPromptExpansion` hook makes the change: Claude Code fires that event when a person types a command, never when the model invokes one, and the skill is user-invoked only besides.
 The hook records the session id in `.state/disengaged-sessions` under the plugin root; both enforcing hooks read that file first and exit before doing anything for a listed session.
 The file is not under `${CLAUDE_PLUGIN_DATA}` because the Orchestrator guard is a skill hook, and Claude Code gives a skill hook only `${CLAUDE_PLUGIN_ROOT}`; under a marketplace install an update moves the root and drops the state, which re-engages the hooks, while a plugin loaded from a fixed directory keeps it.

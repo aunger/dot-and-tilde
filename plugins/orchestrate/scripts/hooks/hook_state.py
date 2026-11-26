@@ -57,6 +57,10 @@ STATE_FILE = os.path.join(PLUGIN_ROOT, ".state", STATE_FILE_NAME)
 
 SKILL_NAME = "orch-hooks"
 COMMANDS = ("disengage", "engage", "status")
+USAGE = "Usage: /%s %s" % (SKILL_NAME, " | ".join(COMMANDS))
+# Nothing but /orch-hooks writes the state, so a setting outlives a later
+# /orchestrate in the same session. Every line that reports it says so.
+LASTS = "until the session ends or /orch-hooks changes it, even across a later /orchestrate"
 
 
 def env_disengaged(environ=None):
@@ -111,7 +115,7 @@ def disengage(session_id, state_file=None):
     if session_id not in sessions:
         sessions.append(session_id)
         write_sessions(sessions, state_file)
-    return "orchestrate hooks disengaged for session %s" % session_id
+    return _session_line("disengaged", session_id)
 
 
 def engage(session_id, state_file=None):
@@ -119,19 +123,27 @@ def engage(session_id, state_file=None):
     if session_id in sessions:
         sessions.remove(session_id)
         write_sessions(sessions, state_file)
-    return "orchestrate hooks engaged for session %s" % session_id
+    return _session_line("engaged", session_id)
+
+
+def _session_line(state, session_id):
+    return "orchestrate hooks %s for session %s %s" % (state, session_id, LASTS)
 
 
 def status(session_id, state_file=None, environ=None):
     if env_disengaged(environ):
-        return "orchestrate hooks disengaged for every session by %s" % ENV_VAR
+        return (
+            "orchestrate hooks disengaged for every session by %s while Claude Code's"
+            " environment sets it; /orch-hooks and /orchestrate do not change it" % ENV_VAR
+        )
     if not session_id:
-        return "orchestrate hooks engaged unless a session is listed in %s" % _state_file(
-            state_file
+        return (
+            "orchestrate hooks engaged unless a session is listed in %s; a listed session"
+            " stays disengaged %s" % (_state_file(state_file), LASTS)
         )
     if session_id in listed_sessions(state_file):
-        return "orchestrate hooks disengaged for session %s" % session_id
-    return "orchestrate hooks engaged for session %s" % session_id
+        return _session_line("disengaged", session_id)
+    return _session_line("engaged", session_id)
 
 
 def is_skill_command(command_name):
@@ -148,9 +160,11 @@ def expansion_output(payload, state_file=None, environ=None):
     if not isinstance(payload, dict) or not is_skill_command(payload.get("command_name")):
         return None
     words = str(payload.get("command_args") or "").split()
-    usage = "Usage: /%s %s" % (SKILL_NAME, " | ".join(COMMANDS))
     if words and (len(words) != 1 or words[0] not in COMMANDS):
-        return {"decision": "block", "reason": usage}
+        return {
+            "decision": "block",
+            "reason": "%s. A disengage or engage lasts %s." % (USAGE, LASTS),
+        }
     session_id = payload.get("session_id")
     if not isinstance(session_id, str) or not session_id:
         return {
@@ -166,8 +180,9 @@ def expansion_output(payload, state_file=None, environ=None):
         line = status(session_id, state_file, environ)
     if command is None:
         # A bare /orch-hooks reports status and how to change it. The usage
-        # rides on the one result line, the only text known to reach the user.
-        line = "%s. %s" % (line, usage)
+        # rides on the one result line, the only text known to reach the user,
+        # whose status part already says how long the setting lasts.
+        line = "%s. %s" % (line, USAGE)
     return {
         "hookSpecificOutput": {
             "hookEventName": "UserPromptExpansion",
