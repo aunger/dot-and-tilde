@@ -30,7 +30,8 @@ Only a person changes the state. This script runs as the plugin's
 UserPromptExpansion hook (hooks/hooks.json), which Claude Code fires when a
 person types a command and never when the model invokes one: on
 /orch-hooks disengage, engage or status it applies the change to the session
-in its payload and hands the resulting line to the skill as context. It has
+in its payload and hands the resulting line to the skill as context. A bare
+/orch-hooks reports status, followed by usage, and changes nothing. It has
 no command line that changes anything, and protect_state.py refuses any tool
 call that names the state file, so the model has no direct path to it either.
 That last check reads the command text, so it is a guardrail, not a sandbox.
@@ -148,7 +149,7 @@ def expansion_output(payload, state_file=None, environ=None):
         return None
     words = str(payload.get("command_args") or "").split()
     usage = "Usage: /%s %s" % (SKILL_NAME, " | ".join(COMMANDS))
-    if len(words) != 1 or words[0] not in COMMANDS:
+    if words and (len(words) != 1 or words[0] not in COMMANDS):
         return {"decision": "block", "reason": usage}
     session_id = payload.get("session_id")
     if not isinstance(session_id, str) or not session_id:
@@ -156,13 +157,17 @@ def expansion_output(payload, state_file=None, environ=None):
             "decision": "block",
             "reason": "The hook received no session id, so it changed nothing.",
         }
-    command = words[0]
+    command = words[0] if words else None
     if command == "disengage":
         line = disengage(session_id, state_file)
     elif command == "engage":
         line = engage(session_id, state_file)
     else:
         line = status(session_id, state_file, environ)
+    if command is None:
+        # A bare /orch-hooks reports status and how to change it. The usage
+        # rides on the one result line, the only text known to reach the user.
+        line = "%s. %s" % (line, usage)
     return {
         "hookSpecificOutput": {
             "hookEventName": "UserPromptExpansion",
