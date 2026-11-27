@@ -1,6 +1,6 @@
 ---
 name: orch-hooks
-description: "Disengage or engage the orchestrate plugin's hooks (the dispatch-form check and the Orchestrator guard) for this session. Usage: /orch-hooks disengage, /orch-hooks engage, /orch-hooks status (the default with no argument)."
+description: "Disengage or engage the orchestrate plugin's hooks (the dispatch-form check and the Orchestrator guard) for the rest of this session: the setting lasts until the session ends or /orch-hooks changes it, and a later /orchestrate does not reset it. Usage: /orch-hooks disengage, /orch-hooks engage, /orch-hooks status (the default with no argument)."
 argument-hint: "[disengage | engage | status]"
 disable-model-invocation: true
 ---
@@ -9,6 +9,7 @@ disable-model-invocation: true
 
 The orchestrate plugin's hooks enforce the Orchestrator's rules: one refuses a dispatch to a plugin agent that is not the dispatch form, and the Orchestrator guard, once `/orchestrate` has run in a session, refuses edits, source reads, and other commands in that session.
 `/orch-hooks disengage` switches them off for the current session only, `/orch-hooks engage` switches them back on, and `/orch-hooks status` reports.
+Either setting lasts until the session ends or `/orch-hooks` changes it; a later `/orchestrate` in the same session does not reset it.
 A bare `/orch-hooks` reports the same status, followed by brief usage, and changes nothing.
 
 The change has already been made by the time you read this.

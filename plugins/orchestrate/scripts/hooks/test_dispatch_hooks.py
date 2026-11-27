@@ -23,6 +23,10 @@ import hook_state  # noqa: E402
 import orchestrator_guard  # noqa: E402
 import protect_state  # noqa: E402
 
+# How long an /orch-hooks setting lasts, as every result line states it.
+# Spelled out rather than imported, so the test pins the wording users see.
+LASTS = " until the session ends or /orch-hooks changes it, even across a later /orchestrate"
+
 FORM = (
     "Repository: aunger/gallery-button-for-pixel-camera\n"
     "Issue: #164\n"
@@ -322,15 +326,26 @@ class TestHookState(unittest.TestCase):
     def test_status_lines(self):
         self.assertEqual(
             hook_state.status("s1", self.state, environ={}),
-            "orchestrate hooks engaged for session s1",
+            "orchestrate hooks engaged for session s1" + LASTS,
         )
         hook_state.disengage("s1", self.state)
         self.assertEqual(
             hook_state.status("s1", self.state, environ={}),
-            "orchestrate hooks disengaged for session s1",
+            "orchestrate hooks disengaged for session s1" + LASTS,
         )
-        self.assertIn(
-            hook_state.ENV_VAR, hook_state.status("s1", self.state, {hook_state.ENV_VAR: "1"})
+        self.assertEqual(
+            hook_state.status("s1", self.state, {hook_state.ENV_VAR: "1"}),
+            "orchestrate hooks disengaged for every session by ORCHESTRATE_HOOKS_DISENGAGED"
+            " while Claude Code's environment sets it;"
+            " /orch-hooks and /orchestrate do not change it",
+        )
+        self.assertEqual(
+            hook_state.status(None, self.state, environ={}),
+            (
+                "orchestrate hooks engaged unless a session is listed in %s;"
+                " a listed session stays disengaged" % self.state
+            )
+            + LASTS,
         )
 
     def expansion(self, command_args, command_name="orchestrate:orch-hooks", session_id="s1"):
@@ -350,16 +365,16 @@ class TestHookState(unittest.TestCase):
     def test_the_expansion_hook_applies_each_command(self):
         self.assertEqual(
             self.context_of(self.expansion("disengage")),
-            "orch-hooks result: orchestrate hooks disengaged for session s1",
+            "orch-hooks result: orchestrate hooks disengaged for session s1" + LASTS,
         )
         self.assertTrue(hook_state.hooks_disengaged("s1", self.state, environ={}))
         self.assertEqual(
             self.context_of(self.expansion("status")),
-            "orch-hooks result: orchestrate hooks disengaged for session s1",
+            "orch-hooks result: orchestrate hooks disengaged for session s1" + LASTS,
         )
         self.assertEqual(
             self.context_of(self.expansion(" engage ")),
-            "orch-hooks result: orchestrate hooks engaged for session s1",
+            "orch-hooks result: orchestrate hooks engaged for session s1" + LASTS,
         )
         self.assertFalse(hook_state.hooks_disengaged("s1", self.state, environ={}))
 
@@ -375,7 +390,7 @@ class TestHookState(unittest.TestCase):
         for args in ("", "  ", None):
             self.assertEqual(
                 self.context_of(self.expansion(args)),
-                "orch-hooks result: orchestrate hooks engaged for session s1."
+                "orch-hooks result: orchestrate hooks engaged for session s1" + LASTS + "."
                 " Usage: /orch-hooks disengage | engage | status",
                 args,
             )
@@ -383,7 +398,7 @@ class TestHookState(unittest.TestCase):
         hook_state.disengage("s1", self.state)
         self.assertEqual(
             self.context_of(self.expansion(None)),
-            "orch-hooks result: orchestrate hooks disengaged for session s1."
+            "orch-hooks result: orchestrate hooks disengaged for session s1" + LASTS + "."
             " Usage: /orch-hooks disengage | engage | status",
         )
         self.assertEqual(hook_state.listed_sessions(self.state), ["s1"])
@@ -395,7 +410,12 @@ class TestHookState(unittest.TestCase):
         for args in ("off", "disengage now"):
             output = self.expansion(args)
             self.assertEqual(output["decision"], "block", args)
-            self.assertIn("Usage: /orch-hooks disengage | engage | status", output["reason"])
+            self.assertEqual(
+                output["reason"],
+                "Usage: /orch-hooks disengage | engage | status."
+                " A disengage or engage lasts" + LASTS + ".",
+                args,
+            )
         self.assertEqual(hook_state.listed_sessions(self.state), [])
 
     def test_no_session_id_blocks(self):
